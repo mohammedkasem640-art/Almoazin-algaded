@@ -1,6 +1,7 @@
 package com.example.ui.tabs
 
 import android.content.Context
+import android.app.Activity
 import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -106,6 +107,17 @@ fun AdhanTab(
         uri?.let {
             val savedPath = FileStorageHelper.saveUriToInternalStorage(context, it, "pre_sound", "pre_${activePrayerTab.lowercase()}")
             onSetPreAdhanSound(activePrayerTab, savedPath)
+        }
+    }
+
+    val preSoundRingtonePicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val uri = result.data?.getParcelableExtra<Uri>(android.media.RingtoneManager.EXTRA_RINGTONE_PICKED_URI)
+            if (uri != null) {
+                onSetPreAdhanSound(activePrayerTab, uri.toString())
+            }
         }
     }
 
@@ -231,23 +243,45 @@ fun AdhanTab(
                 )
 
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(
+                        onClick = {
+                            val intent = Intent(android.media.RingtoneManager.ACTION_RINGTONE_PICKER).apply {
+                                putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_TYPE, android.media.RingtoneManager.TYPE_ALARM or android.media.RingtoneManager.TYPE_NOTIFICATION)
+                                putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_SHOW_DEFAULT, true)
+                                putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, false)
+                            }
+                            preSoundRingtonePicker.launch(intent)
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Default.NotificationsActive, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("نغمة الهاتف", fontSize = 11.sp)
+                    }
+
                     Button(
                         onClick = { preSoundPicker.launch("audio/*") },
                         modifier = Modifier.weight(1f)
                     ) {
-                        Icon(Icons.Default.UploadFile, contentDescription = null)
+                        Icon(Icons.Default.UploadFile, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(4.dp))
-                        Text(AppStrings.get("pick_audio_file", lang))
+                        Text("ملف صوتي", fontSize = 11.sp)
                     }
-
-                    OutlinedButton(
-                        onClick = { AudioPlayerHelper.playTimeChime() },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Icon(Icons.Default.PlayArrow, contentDescription = null)
-                        Spacer(Modifier.width(4.dp))
-                        Text(AppStrings.get("preview_audio", lang))
-                    }
+                }
+                
+                OutlinedButton(
+                    onClick = { 
+                        if (!currentPreAdhanUri.isNullOrBlank()) {
+                            AudioPlayerHelper.playAudioUri(context, currentPreAdhanUri)
+                        } else {
+                            AudioPlayerHelper.playTimeChime() 
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Default.PlayArrow, contentDescription = null)
+                    Spacer(Modifier.width(4.dp))
+                    Text(AppStrings.get("preview_audio", lang))
                 }
             }
         }

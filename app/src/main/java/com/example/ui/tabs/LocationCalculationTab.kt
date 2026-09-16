@@ -19,6 +19,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.activity.compose.rememberLauncherForActivityResult
 import com.example.data.local.AppSettingsEntity
 import com.example.ui.theme.IslamicGold
 import com.example.util.AppStrings
@@ -105,8 +106,25 @@ fun LocationCalculationTab(
                 }
 
                 // Auto GPS Button
+                val locationPermissionLauncher = rememberLauncherForActivityResult(
+                    contract = androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions()
+                ) { permissions ->
+                    val granted = permissions.getOrDefault(android.Manifest.permission.ACCESS_FINE_LOCATION, false) ||
+                            permissions.getOrDefault(android.Manifest.permission.ACCESS_COARSE_LOCATION, false)
+                    if (granted) {
+                        onDetectLocation()
+                    }
+                }
+
                 Button(
-                    onClick = onDetectLocation,
+                    onClick = {
+                        locationPermissionLauncher.launch(
+                            arrayOf(
+                                android.Manifest.permission.ACCESS_FINE_LOCATION,
+                                android.Manifest.permission.ACCESS_COARSE_LOCATION
+                            )
+                        )
+                    },
                     modifier = Modifier.fillMaxWidth().testTag("btn_auto_location"),
                     enabled = !isDetectingLocation,
                     colors = ButtonDefaults.buttonColors(containerColor = IslamicGold, contentColor = Color.Black)

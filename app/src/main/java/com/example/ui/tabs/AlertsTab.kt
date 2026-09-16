@@ -446,6 +446,18 @@ fun AddAlertDialog(
         }
     }
 
+    val ringtonePicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val uri = result.data?.getParcelableExtra<Uri>(android.media.RingtoneManager.EXTRA_RINGTONE_PICKED_URI)
+            if (uri != null) {
+                ringtoneUri = uri.toString()
+                ringtoneName = android.media.RingtoneManager.getRingtone(context, uri).getTitle(context) ?: "نغمة النظام"
+            }
+        }
+    }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(AppStrings.get("add_alert_btn", language), fontWeight = FontWeight.Bold) },
@@ -543,14 +555,33 @@ fun AddAlertDialog(
 
                 // 4. Alert Ringtone
                 Text(AppStrings.get("alert_ringtone", language), fontWeight = FontWeight.SemiBold)
-                OutlinedButton(
-                    onClick = { audioPicker.launch("audio/*") },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(Icons.Default.AudioFile, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text(ringtoneName)
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(
+                        onClick = {
+                            val intent = Intent(android.media.RingtoneManager.ACTION_RINGTONE_PICKER).apply {
+                                putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_TYPE, android.media.RingtoneManager.TYPE_ALARM or android.media.RingtoneManager.TYPE_NOTIFICATION)
+                                putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_SHOW_DEFAULT, true)
+                                putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, false)
+                            }
+                            ringtonePicker.launch(intent)
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Default.NotificationsActive, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("نغمة الهاتف", fontSize = 12.sp)
+                    }
+                    
+                    OutlinedButton(
+                        onClick = { audioPicker.launch("audio/*") },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Default.AudioFile, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("ملف صوتي", fontSize = 12.sp)
+                    }
                 }
+                Text("المحدد: $ringtoneName", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
             }
         },
         confirmButton = {

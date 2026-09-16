@@ -119,7 +119,7 @@ object PrayerTimesCalculator {
 
         // Asr
         val asrElevation = r2d(atan(1.0 / (madhab.shadowFactor + tan(d2r(abs(lat - decl))))))
-        val asrTime = dhuhrBase + sunAngleTime(asrElevation, lat, decl)
+        val asrTime = dhuhrBase + sunAngleTime(-asrElevation, lat, decl)
 
         // Maghrib
         val maghribTime = if (method.maghribAngle != null) {

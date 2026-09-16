@@ -171,6 +171,7 @@ class AdhanScreenActivity : ComponentActivity() {
                     prayerId = rawPrayerId,
                     prayerName = formattedPrayerName,
                     isAlert = isAlert,
+                    minutesRemaining = minutesRemaining,
                     onPlayDuaVideo = {
                         launchDuaVideo()
                     },
@@ -195,6 +196,7 @@ fun AdhanScreenContent(
     prayerId: String,
     prayerName: String,
     isAlert: Boolean,
+    minutesRemaining: Int,
     onPlayDuaVideo: () -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -331,6 +333,46 @@ fun AdhanScreenContent(
                         )
                     )
             )
+
+            // 3. CENTERED ALERT MESSAGE WHEN isAlert == true
+            if (isAlert) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(24.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(24.dp),
+                        color = Color.Black.copy(alpha = 0.8f),
+                        border = androidx.compose.foundation.BorderStroke(2.dp, IslamicGold),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(vertical = 32.dp, horizontal = 24.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.NotificationsActive,
+                                contentDescription = null,
+                                tint = IslamicGold,
+                                modifier = Modifier.size(56.dp)
+                            )
+                            Spacer(Modifier.height(16.dp))
+                            Text(
+                                text = "يتبقى $minutesRemaining دقيقة على أذان $cleanPrayerName",
+                                fontSize = 28.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White,
+                                textAlign = TextAlign.Center,
+                                lineHeight = 38.sp
+                            )
+                        }
+                    }
+                }
+            }
 
             // 2. TOP LEFT: "أذان + اسم الصلاة" & TOP RIGHT: Discreet Close Button
             CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {

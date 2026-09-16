@@ -130,15 +130,6 @@ object NotificationHelper {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        // If screen is locked, launch the lockscreen AdhanScreenActivity directly without opening the app
-        if (isDeviceLocked(context)) {
-            try {
-                context.startActivity(screenIntent)
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }
-
         val duaIntent = Intent(context, DuaVideoActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             putExtra("EXTRA_PRAYER_ID", prayerId)
@@ -160,6 +151,7 @@ object NotificationHelper {
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setAutoCancel(true)
             .setContentIntent(screenPendingIntent)
+            .setFullScreenIntent(screenPendingIntent, true)
             .addAction(android.R.drawable.ic_menu_view, "عرض الشاشة", screenPendingIntent)
             .addAction(android.R.drawable.ic_media_play, "دعاء بعد الأذان (أفقي)", duaPendingIntent)
             .build()
@@ -194,24 +186,16 @@ object NotificationHelper {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        // If device is locked, show on lock screen
-        if (isDeviceLocked(context)) {
-            try {
-                context.startActivity(screenIntent)
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }
-
         val notification = NotificationCompat.Builder(context, CHANNEL_ALERTS)
             .setSmallIcon(android.R.drawable.ic_popup_reminder)
             .setContentTitle("تنبيه اقتراب الصلاة")
             .setContentText(alertText)
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setCategory(NotificationCompat.CATEGORY_REMINDER)
+            .setPriority(NotificationCompat.PRIORITY_MAX)
+            .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setAutoCancel(true)
             .setContentIntent(screenPendingIntent)
+            .setFullScreenIntent(screenPendingIntent, true)
             .addAction(android.R.drawable.ic_menu_view, "عرض التنبيه", screenPendingIntent)
             .build()
 

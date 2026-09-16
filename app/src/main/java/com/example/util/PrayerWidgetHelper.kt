@@ -200,6 +200,47 @@ object PrayerWidgetHelper {
         return views
     }
 
+    fun buildSalawatWidgetRemoteViews(context: Context, settings: AppSettingsEntity): RemoteViews {
+        val views = RemoteViews(context.packageName, R.layout.widget_salawat)
+
+        val now = System.currentTimeMillis()
+        val intervalMs = (settings.salawatIntervalMinutes) * 60 * 1000L
+        var nextTime = settings.nextSalawatTimestamp
+        if (nextTime <= now) {
+            nextTime = now + intervalMs 
+        }
+
+        val diffMs = (nextTime - now).coerceAtLeast(0L)
+        val baseTime = android.os.SystemClock.elapsedRealtime() + diffMs
+
+        views.setChronometer(R.id.chronometer_standalone_salawat, baseTime, null, true)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
+            views.setChronometerCountDown(R.id.chronometer_standalone_salawat, true)
+        }
+
+        val actionIntent = Intent(context, com.example.receiver.WidgetActionReceiver::class.java).apply {
+            action = com.example.receiver.WidgetActionReceiver.ACTION_PLAY_SALAWAT
+        }
+        val actionPendingIntent = PendingIntent.getBroadcast(
+            context,
+            200,
+            actionIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        views.setOnClickPendingIntent(R.id.btn_standalone_salawat_action, actionPendingIntent)
+
+        val appIntent = Intent(context, com.example.MainActivity::class.java)
+        val appPendingIntent = PendingIntent.getActivity(
+            context,
+            201,
+            appIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        views.setOnClickPendingIntent(R.id.widget_salawat_root, appPendingIntent)
+
+        return views
+    }
+
     fun updateAllWidgets(context: Context) {
         CoroutineScope(Dispatchers.IO).launch {
             try {

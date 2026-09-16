@@ -226,7 +226,14 @@ fun AdhanScreenContent(
                 waitCount++
             }
             if (AudioPlayerHelper.isPlaying()) {
-                while (AudioPlayerHelper.isPlaying()) {
+                while (true) {
+                    if (!AudioPlayerHelper.isPlaying()) {
+                        // Check again after 1.5 seconds to ensure it's not just transitioning
+                        delay(1500)
+                        if (!AudioPlayerHelper.isPlaying()) {
+                            break
+                        }
+                    }
                     delay(250)
                 }
                 // Adhan audio ended -> launch post-Adhan Dua video automatically
@@ -243,7 +250,13 @@ fun AdhanScreenContent(
                 waitCount++
             }
             if (AudioPlayerHelper.isPlaying()) {
-                while (AudioPlayerHelper.isPlaying()) {
+                while (true) {
+                    if (!AudioPlayerHelper.isPlaying()) {
+                        delay(1000)
+                        if (!AudioPlayerHelper.isPlaying()) {
+                            break
+                        }
+                    }
                     delay(250)
                 }
                 onDismiss()

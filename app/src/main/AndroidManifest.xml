@@ -85,7 +85,7 @@
             android:enabled="true"
             android:exported="false" />
 
-        <!-- Home Screen App Widget -->
+        <!-- Home Screen App Widget: Prayer Times -->
         <receiver
             android:name=".receiver.PrayerTimesWidgetProvider"
             android:exported="true">
@@ -95,6 +95,30 @@
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/prayer_widget_info" />
+        </receiver>
+
+        <!-- Home Screen App Widget: Dedicated Salawat upon the Prophet -->
+        <receiver
+            android:name=".receiver.SalawatWidgetProvider"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/salawat_widget_info" />
+        </receiver>
+
+        <!-- Home Screen App Widget: Mosque Display Board Strip (Images 1 & 2) -->
+        <receiver
+            android:name=".receiver.MosqueStripWidgetProvider"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_mosque_strip_info" />
         </receiver>
 
         <!-- Widget & Notification Action Receiver -->

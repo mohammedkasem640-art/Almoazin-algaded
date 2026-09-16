@@ -18,6 +18,7 @@ import com.example.ui.adhan.DuaVideoActivity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import java.util.Calendar
 
 object NotificationHelper {
 
@@ -258,7 +259,8 @@ object NotificationHelper {
                     return@launch
                 }
 
-                val views = PrayerWidgetHelper.buildWidgetRemoteViews(context, settings)
+                val compactViews = PrayerWidgetHelper.buildNotificationRemoteViews(context, settings)
+                val bigViews = PrayerWidgetHelper.buildWidgetRemoteViews(context, settings)
 
                 val intent = Intent(context, MainActivity::class.java)
                 val contentPendingIntent = PendingIntent.getActivity(
@@ -278,18 +280,31 @@ object NotificationHelper {
                     PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
                 )
 
-                val notification = NotificationCompat.Builder(context, CHANNEL_ONGOING)
+                val now = Calendar.getInstance()
+                val schedule = PrayerTimesCalculator.calculateTimes(now.time, settings)
+                val (_, nextPrayer) = PrayerWidgetHelper.getCurrentAndNextPrayer(schedule, now.timeInMillis)
+
+                val builder = NotificationCompat.Builder(context, CHANNEL_ONGOING)
                     .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
-                    .setStyle(NotificationCompat.DecoratedCustomViewStyle())
-                    .setCustomContentView(views)
-                    .setCustomBigContentView(views)
+                    .setCustomContentView(compactViews)
+                    .setCustomBigContentView(bigViews)
                     .setContentIntent(contentPendingIntent)
                     .setOngoing(true)
                     .setOnlyAlertOnce(true)
                     .setPriority(NotificationCompat.PRIORITY_LOW)
                     .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-                    .addAction(android.R.drawable.ic_media_play, "صلّ الآن ﷺ", playPendingIntent)
-                    .build()
+
+                if (settings.notificationBarShowSeconds) {
+                    builder.setUsesChronometer(true)
+                    builder.setChronometerCountDown(true)
+                    builder.setWhen(nextPrayer.timestamp)
+                }
+
+                if (settings.salawatEnabled && settings.notificationBarShowSalawat) {
+                    builder.addAction(android.R.drawable.ic_media_play, "صلّ الآن ﷺ", playPendingIntent)
+                }
+
+                val notification = builder.build()
 
                 NotificationManagerCompat.from(context).notify(NOTIFICATION_ID_ONGOING, notification)
             } catch (e: Exception) {

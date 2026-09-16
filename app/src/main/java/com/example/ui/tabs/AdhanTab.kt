@@ -29,6 +29,7 @@ import com.example.ui.adhan.DuaVideoActivity
 import com.example.ui.theme.IslamicGold
 import com.example.util.AppStrings
 import com.example.util.AudioPlayerHelper
+import com.example.util.FileStorageHelper
 import com.example.util.ZipExtractor
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -93,19 +94,28 @@ fun AdhanTab(
     val adhanAudioPicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
-        uri?.let { onSetAdhanAudio(activePrayerTab, it.toString()) }
+        uri?.let {
+            val savedPath = FileStorageHelper.saveUriToInternalStorage(context, it, "adhan_audio", "adhan_${activePrayerTab.lowercase()}")
+            onSetAdhanAudio(activePrayerTab, savedPath)
+        }
     }
 
     val preSoundPicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
-        uri?.let { onSetPreAdhanSound(activePrayerTab, it.toString()) }
+        uri?.let {
+            val savedPath = FileStorageHelper.saveUriToInternalStorage(context, it, "pre_sound", "pre_${activePrayerTab.lowercase()}")
+            onSetPreAdhanSound(activePrayerTab, savedPath)
+        }
     }
 
     val duaVideoPicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
-        uri?.let { onSetDuaVideo(activePrayerTab, it.toString()) }
+        uri?.let {
+            val savedPath = FileStorageHelper.saveUriToInternalStorage(context, it, "dua_videos", "dua_${activePrayerTab.lowercase()}")
+            onSetDuaVideo(activePrayerTab, savedPath)
+        }
     }
 
     val zipPicker = rememberLauncherForActivityResult(

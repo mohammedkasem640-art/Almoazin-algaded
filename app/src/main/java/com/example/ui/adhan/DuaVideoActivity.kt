@@ -85,6 +85,23 @@ class DuaVideoActivity : ComponentActivity() {
         insetsController.hide(WindowInsetsCompat.Type.systemBars())
     }
 
+    private fun closeAndTurnOffScreen() {
+        try {
+            AudioPlayerHelper.stopAudio()
+            window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                setShowWhenLocked(false)
+                setTurnScreenOn(false)
+            }
+            val lp = window.attributes
+            lp.screenBrightness = 0.001f
+            window.attributes = lp
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        finishAndRemoveTask()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableImmersiveLandscape()
@@ -100,7 +117,7 @@ class DuaVideoActivity : ComponentActivity() {
                     prayerName = prayerName,
                     explicitVideoUri = explicitVideoUri,
                     onClose = {
-                        finishAndRemoveTask()
+                        closeAndTurnOffScreen()
                     }
                 )
             }
@@ -201,12 +218,16 @@ fun DuaVideoScreen(
                         setOnCompletionListener {
                             isPlaying = false
                             videoEnded = true
-                            isControlsVisible = true
+                            isControlsVisible = false
+                            // Automatically close and turn off screen when video ends
+                            postDelayed({
+                                onClose()
+                            }, 500)
                         }
                         setOnErrorListener { _, _, _ ->
                             isPlaying = false
                             videoEnded = true
-                            isControlsVisible = true
+                            onClose()
                             true
                         }
                     }
@@ -223,13 +244,13 @@ fun DuaVideoScreen(
                 isPlaying = isPlaying,
                 onComplete = {
                     videoEnded = true
-                    isControlsVisible = true
+                    onClose()
                 }
             )
         }
 
         // -------------------------------------------------------------
-        // 2. CONTROLS OVERLAY: Animated Top & Bottom Bars
+        // 2. CONTROLS OVERLAY: Pure & Clean (No text written on video)
         // -------------------------------------------------------------
         AnimatedVisibility(
             visible = isControlsVisible,
@@ -240,254 +261,24 @@ fun DuaVideoScreen(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.38f))
+                    .padding(20.dp)
             ) {
-                // Top Action Bar
-                Row(
+                // Discreet close button at top-right
+                IconButton(
+                    onClick = onClose,
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .align(Alignment.TopCenter)
-                        .background(
-                            Brush.verticalGradient(
-                                colors = listOf(Color.Black.copy(alpha = 0.85f), Color.Transparent)
-                            )
-                        )
-                        .padding(horizontal = 20.dp, vertical = 14.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                        .align(Alignment.TopEnd)
+                        .size(42.dp)
+                        .clip(CircleShape)
+                        .background(Color.Black.copy(alpha = 0.55f))
+                        .testTag("btn_close_dua_video")
                 ) {
-                    // Title info
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Surface(
-                            shape = CircleShape,
-                            color = IslamicGold.copy(alpha = 0.2f),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, IslamicGold),
-                            modifier = Modifier.size(34.dp)
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    imageVector = Icons.Default.PlayCircle,
-                                    contentDescription = null,
-                                    tint = IslamicGold,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-                        }
-
-                        Column {
-                            Text(
-                                text = "دعاء ما بعد الأذان • $prayerName",
-                                color = Color.White,
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = if (!videoUri.isNullOrBlank()) "فيديو مخصص (أفقي ملء الشاشة)" else "فيديو دعاء الوسيلة (مدمج أفقي)",
-                                color = IslamicGold,
-                                fontSize = 11.sp
-                            )
-                        }
-                    }
-
-                    // Top Action Controls
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        // Toggle Fill Screen mode (Full Edge-to-Edge vs Fit Aspect Ratio)
-                        if (!videoUri.isNullOrBlank()) {
-                            Button(
-                                onClick = {
-                                    isFillScreen = !isFillScreen
-                                    fullScreenVideoView?.fillScreen = isFillScreen
-                                },
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = if (isFillScreen) IslamicGold else Color(0xFF233549),
-                                    contentColor = if (isFillScreen) Color.Black else Color.White
-                                ),
-                                shape = RoundedCornerShape(20.dp),
-                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-                                modifier = Modifier.height(34.dp)
-                            ) {
-                                Icon(
-                                    imageVector = if (isFillScreen) Icons.Default.Fullscreen else Icons.Default.FitScreen,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Spacer(Modifier.width(6.dp))
-                                Text(
-                                    text = if (isFillScreen) "ملء الشاشة بالكامل" else "أبعاد الفيديو الأصلية",
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
-
-                        // Close button (X)
-                        IconButton(
-                            onClick = onClose,
-                            modifier = Modifier
-                                .size(36.dp)
-                                .clip(CircleShape)
-                                .background(Color.Black.copy(alpha = 0.6f))
-                                .border(1.dp, Color.White.copy(alpha = 0.3f), CircleShape)
-                                .testTag("btn_close_dua_video")
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Close,
-                                contentDescription = "إغلاق",
-                                tint = Color.White,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                    }
-                }
-
-                // Center Play/Replay / Finished Banner
-                if (videoEnded) {
-                    Card(
-                        modifier = Modifier
-                            .align(Alignment.Center)
-                            .wrapContentSize(),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color.Black.copy(alpha = 0.85f)),
-                        border = androidx.compose.foundation.BorderStroke(1.5.dp, IslamicGold)
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(24.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(14.dp)
-                        ) {
-                            Text(
-                                text = "تقبل الله صلاتكم ودعاءكم 🤲",
-                                color = IslamicGold,
-                                fontSize = 20.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = "اللهم رب هذه الدعوة التامة والصلاة القائمة آت محمداً الوسيلة والفضيلة",
-                                color = Color.White,
-                                fontSize = 13.sp,
-                                textAlign = TextAlign.Center
-                            )
-                            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                Button(
-                                    onClick = {
-                                        videoEnded = false
-                                        isPlaying = true
-                                        fullScreenVideoView?.seekTo(0)
-                                        fullScreenVideoView?.start()
-                                    },
-                                    colors = ButtonDefaults.buttonColors(containerColor = IslamicGold, contentColor = Color.Black),
-                                    shape = RoundedCornerShape(12.dp)
-                                ) {
-                                    Icon(Icons.Default.Replay, contentDescription = null)
-                                    Spacer(Modifier.width(6.dp))
-                                    Text("إعادة التشغيل", fontWeight = FontWeight.Bold)
-                                }
-
-                                OutlinedButton(
-                                    onClick = onClose,
-                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
-                                    shape = RoundedCornerShape(12.dp)
-                                ) {
-                                    Text("إغلاق الشاشة")
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // Bottom Control Bar (Play, Pause, Replay, Dismiss)
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .align(Alignment.BottomCenter)
-                        .background(
-                            Brush.verticalGradient(
-                                colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.9f))
-                            )
-                        )
-                        .padding(horizontal = 24.dp, vertical = 12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // Play / Pause / Replay toggle
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        IconButton(
-                            onClick = {
-                                if (fullScreenVideoView != null) {
-                                    if (isPlaying) {
-                                        fullScreenVideoView?.pause()
-                                        isPlaying = false
-                                    } else {
-                                        fullScreenVideoView?.start()
-                                        isPlaying = true
-                                    }
-                                } else {
-                                    isPlaying = !isPlaying
-                                }
-                            },
-                            modifier = Modifier
-                                .size(44.dp)
-                                .clip(CircleShape)
-                                .background(IslamicGold)
-                        ) {
-                            Icon(
-                                imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                                contentDescription = if (isPlaying) "إيقاف مؤقت" else "تشغيل",
-                                tint = Color.Black,
-                                modifier = Modifier.size(24.dp)
-                            )
-                        }
-
-                        IconButton(
-                            onClick = {
-                                videoEnded = false
-                                isPlaying = true
-                                fullScreenVideoView?.seekTo(0)
-                                fullScreenVideoView?.start()
-                            },
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(CircleShape)
-                                .background(Color.White.copy(alpha = 0.15f))
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Replay,
-                                contentDescription = "إعادة من البداية",
-                                tint = Color.White,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-
-                        Text(
-                            text = if (isFillScreen) "وضع ملء الشاشة الأفقي: مفعل (Edge-to-Edge)" else "العرض القياسي للأبعاد",
-                            color = Color(0xFFA0B2C6),
-                            fontSize = 11.sp
-                        )
-                    }
-
-                    // Close / Return button
-                    Button(
-                        onClick = onClose,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color.White.copy(alpha = 0.2f),
-                            contentColor = Color.White
-                        ),
-                        shape = RoundedCornerShape(16.dp),
-                        modifier = Modifier.height(36.dp)
-                    ) {
-                        Icon(Icons.Default.Done, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text("تم والدخول للتطبيق", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                    }
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "إغلاق",
+                        tint = Color.White,
+                        modifier = Modifier.size(24.dp)
+                    )
                 }
             }
         }
@@ -495,9 +286,8 @@ fun DuaVideoScreen(
 }
 
 /**
- * High-definition cinematic horizontal Dua presentation when no custom video is uploaded.
- * Fills the entire screen in landscape with deep emerald mosque background,
- * golden Arabic calligraphy, and animated progression.
+ * Clean landscape presentation when no custom video is uploaded.
+ * Audio plays peacefully without any text clutter.
  */
 @Composable
 private fun BuiltInCinematicDuaView(
@@ -505,7 +295,6 @@ private fun BuiltInCinematicDuaView(
     isPlaying: Boolean,
     onComplete: () -> Unit
 ) {
-    // 25-second animated recitation timer
     var progressSeconds by remember { mutableIntStateOf(0) }
     val totalSeconds = 22
 
@@ -538,117 +327,23 @@ private fun BuiltInCinematicDuaView(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(14.dp)
-                .border(1.5.dp, IslamicGold.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
-                .padding(6.dp)
-                .border(0.5.dp, IslamicGold.copy(alpha = 0.2f), RoundedCornerShape(8.dp))
+                .padding(16.dp)
+                .border(1.dp, IslamicGold.copy(alpha = 0.35f), RoundedCornerShape(14.dp))
         )
 
-        // Main Horizontal Content
-        Row(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 40.dp, vertical = 24.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+        // Clean central crescent emblem without any text written on the screen
+        Surface(
+            shape = CircleShape,
+            color = Color.Black.copy(alpha = 0.45f),
+            border = androidx.compose.foundation.BorderStroke(2.dp, IslamicGold),
+            modifier = Modifier.size(90.dp)
         ) {
-            // Left Column: Crescent Emblem & Prayer Badge
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.width(180.dp)
-            ) {
-                Surface(
-                    shape = CircleShape,
-                    color = Color.Black.copy(alpha = 0.4f),
-                    border = androidx.compose.foundation.BorderStroke(2.dp, IslamicGold),
-                    modifier = Modifier.size(70.dp)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = Icons.Default.NightsStay,
-                            contentDescription = null,
-                            tint = IslamicGold,
-                            modifier = Modifier.size(38.dp)
-                        )
-                    }
-                }
-
-                Text(
-                    text = "دعاء ما بعد الأذان",
-                    color = IslamicGold,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Bold
-                )
-
-                Text(
-                    text = "أذان $prayerName",
-                    color = Color.White,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
-
-                Spacer(Modifier.height(4.dp))
-
-                // Time remaining pill
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(Color(0xFF0B4633))
-                        .padding(horizontal = 10.dp, vertical = 4.dp)
-                ) {
-                    Text(
-                        text = "00:${(totalSeconds - progressSeconds).coerceAtLeast(0).toString().padStart(2, '0')}",
-                        color = DigitalGreenLed,
-                        fontSize = 13.sp,
-                        fontFamily = FontFamily.Monospace,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
-
-            // Right Column: Duaa Al-Wasilah in Prominent Arabic Typography
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(start = 20.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Text(
-                    text = "« اللَّهُمَّ رَبَّ هَذِهِ الدَّعْوَةِ التَّامَّةِ ، وَالصَّلَاةِ الْقَائِمَةِ »",
-                    color = IslamicGold,
-                    fontSize = 21.sp,
-                    fontWeight = FontWeight.Black,
-                    textAlign = TextAlign.Center
-                )
-
-                Text(
-                    text = "« آتِ مُحَمَّدًا الْوَسِيلَةَ وَالْفَضِيلَةَ ، وَابْعَثْهُ مَقَامًا مَحْمُودًا الَّذِي وَعَدْتَهُ »",
-                    color = Color.White,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Center,
-                    lineHeight = 32.sp
-                )
-
-                Text(
-                    text = "« حَلَّتْ لَهُ شَفَاعَتِي يَوْمَ الْقِيَامَةِ » — صحيح البخاري",
-                    color = Color(0xFFA0B2C6),
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Normal,
-                    textAlign = TextAlign.Center
-                )
-
-                // Progress Bar
-                LinearProgressIndicator(
-                    progress = { progressSeconds.toFloat() / totalSeconds.toFloat() },
-                    modifier = Modifier
-                        .fillMaxWidth(0.85f)
-                        .height(4.dp)
-                        .clip(RoundedCornerShape(2.dp)),
-                    color = IslamicGold,
-                    trackColor = Color.White.copy(alpha = 0.2f)
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    imageVector = Icons.Default.NightsStay,
+                    contentDescription = null,
+                    tint = IslamicGold,
+                    modifier = Modifier.size(50.dp)
                 )
             }
         }

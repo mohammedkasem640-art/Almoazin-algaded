@@ -9,6 +9,7 @@ import com.example.service.AdhanAudioService
 import com.example.util.AlarmScheduler
 import com.example.util.AudioPlayerHelper
 import com.example.util.NotificationHelper
+import com.example.util.PrayerWidgetHelper
 import com.example.util.ZipExtractor
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -31,6 +32,8 @@ class PrayerAlarmReceiver : BroadcastReceiver() {
 
                 // Reschedule next prayer times
                 AlarmScheduler.scheduleAll(context)
+                PrayerWidgetHelper.updateAllWidgets(context)
+                NotificationHelper.updateOngoingPrayerNotification(context)
             }
 
             AlarmScheduler.ACTION_PRE_ALERT -> {

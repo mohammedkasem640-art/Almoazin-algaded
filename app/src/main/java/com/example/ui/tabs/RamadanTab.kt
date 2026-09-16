@@ -27,6 +27,7 @@ import com.example.data.local.AppSettingsEntity
 import com.example.ui.adhan.AdhanScreenActivity
 import com.example.ui.theme.IslamicGold
 import com.example.util.AppStrings
+import com.example.util.FileStorageHelper
 import com.example.util.HijriCalendarHelper
 import java.util.Date
 
@@ -49,13 +50,19 @@ fun RamadanTab(
     val cannonPicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
-        uri?.let { onSetCannonVideo(it.toString()) }
+        uri?.let {
+            val savedPath = FileStorageHelper.saveUriToInternalStorage(context, it, "ramadan_videos", "cannon")
+            onSetCannonVideo(savedPath)
+        }
     }
 
     val mesaharatyPicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
-        uri?.let { onSetMesaharatyVideo(it.toString()) }
+        uri?.let {
+            val savedPath = FileStorageHelper.saveUriToInternalStorage(context, it, "ramadan_videos", "mesaharaty")
+            onSetMesaharatyVideo(savedPath)
+        }
     }
 
     var beforeFajrMinutes by remember(settings.mesaharatyBeforeFajrMinutes) {

@@ -126,7 +126,9 @@ fun MenuDialog(
                     when (selectedTabIndex) {
                         0 -> LanguageTab(
                             currentLanguage = settings.language,
-                            onLanguageSelected = { viewModel.setLanguage(it) }
+                            onLanguageSelected = { viewModel.setLanguage(it) },
+                            isDarkMode = settings.isDarkMode,
+                            onThemeToggle = { viewModel.setDarkMode(it) }
                         )
 
                         1 -> LocationCalculationTab(

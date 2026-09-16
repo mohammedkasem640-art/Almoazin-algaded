@@ -4,6 +4,8 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import com.example.util.AlarmScheduler
+import com.example.util.NotificationHelper
+import com.example.util.PrayerWidgetHelper
 
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
@@ -14,6 +16,8 @@ class BootReceiver : BroadcastReceiver() {
             action == Intent.ACTION_TIMEZONE_CHANGED
         ) {
             AlarmScheduler.scheduleAll(context)
+            PrayerWidgetHelper.updateAllWidgets(context)
+            NotificationHelper.updateOngoingPrayerNotification(context)
         }
     }
 }

@@ -9,6 +9,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -94,8 +95,14 @@ fun MosqueClockScreen(
         label = "led_pulse"
     )
 
-    // Next Prayer countdown
-    val timeToNextMillis = schedule?.timeToNextMillis ?: 0L
+    // Next Prayer live countdown ticking with currentCalendar every second
+    val nowMs = currentCalendar.timeInMillis
+    val nextPrayerTimestamp = schedule?.nextPrayer?.timestamp ?: 0L
+    val timeToNextMillis = if (nextPrayerTimestamp > nowMs) {
+        nextPrayerTimestamp - nowMs
+    } else {
+        (schedule?.timeToNextMillis ?: 0L).coerceAtLeast(0L)
+    }
     val remainingHours = timeToNextMillis / (1000 * 60 * 60)
     val remainingMins = (timeToNextMillis / (1000 * 60)) % 60
     val remainingSecs = (timeToNextMillis / 1000) % 60
@@ -339,6 +346,100 @@ fun MosqueClockScreen(
                                     text = gregorianString,
                                     fontSize = 12.sp,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // شعار وبطاقة الصلاة على النبي ﷺ (Bar & Emblem prominently visible on top)
+            item {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .clickable { onTestSalawat() }
+                        .border(
+                            width = 1.5.dp,
+                            brush = Brush.horizontalGradient(
+                                if (isDark) listOf(IslamicGold, IslamicGoldLight, IslamicGold)
+                                else listOf(EmeraldPrimaryLight, IslamicGold, EmeraldPrimaryLight)
+                            ),
+                            shape = RoundedCornerShape(16.dp)
+                        )
+                        .shadow(if (isDark) 6.dp else 2.dp, RoundedCornerShape(16.dp)),
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (isDark) Color(0xFF09291D) else Color(0xFFEAF5EE)
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 10.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Surface(
+                                shape = CircleShape,
+                                color = if (isDark) IslamicGold.copy(alpha = 0.2f) else EmeraldPrimaryLight.copy(alpha = 0.15f),
+                                border = androidx.compose.foundation.BorderStroke(
+                                    1.dp,
+                                    if (isDark) IslamicGold else EmeraldPrimaryLight
+                                ),
+                                modifier = Modifier.size(42.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Text(
+                                        text = "ﷺ",
+                                        fontSize = 24.sp,
+                                        fontWeight = FontWeight.Black,
+                                        color = if (isDark) IslamicGold else EmeraldPrimaryLight
+                                    )
+                                }
+                            }
+
+                            Column {
+                                Text(
+                                    text = "ﷺ صَلِّ عَلَى الحَبِيبِ المُصْطَفَى ﷺ",
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = if (isDark) IslamicGold else EmeraldPrimaryLight
+                                )
+                                Text(
+                                    text = "اللهم صل وسلم وبارك على نبينا محمد",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = if (isDark) Color(0xFFD4ECE1) else Color(0xFF1E4E38)
+                                )
+                            }
+                        }
+
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = if (isDark) IslamicGold else EmeraldPrimaryLight,
+                            modifier = Modifier.padding(start = 6.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.VolumeUp,
+                                    contentDescription = "استماع",
+                                    tint = if (isDark) Color.Black else Color.White,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Text(
+                                    text = "استمع",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isDark) Color.Black else Color.White
                                 )
                             }
                         }

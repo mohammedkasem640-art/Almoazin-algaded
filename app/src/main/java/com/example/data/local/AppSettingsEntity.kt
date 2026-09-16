@@ -82,6 +82,7 @@ data class AppSettingsEntity(
     val notificationBarShowSeconds: Boolean = true,
     val notificationBarShowSalawat: Boolean = true,
     val widgetShowSeconds: Boolean = true,
+    val widgetThemeStyle: String = "EMERALD", // "EMERALD", "BURGUNDY", "CLASSIC"
 
     // Post-Adhan Dua Video settings
     val autoPlayDuaAfterAdhan: Boolean = true,

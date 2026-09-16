@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 
 @Database(
     entities = [PrayerAlertEntity::class, AppSettingsEntity::class],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 abstract class PrayerDatabase : RoomDatabase() {

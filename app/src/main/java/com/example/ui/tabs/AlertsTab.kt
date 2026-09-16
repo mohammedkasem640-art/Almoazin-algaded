@@ -38,6 +38,7 @@ import com.example.ui.theme.DigitalGreenLed
 import com.example.ui.theme.IslamicGold
 import com.example.util.AppStrings
 import com.example.util.AudioPlayerHelper
+import com.example.util.FileStorageHelper
 import java.util.Calendar
 
 @Composable
@@ -401,6 +402,7 @@ fun AddAlertDialog(
     onDismiss: () -> Unit,
     onSave: (String, Int, String, String?, String) -> Unit
 ) {
+    val context = LocalContext.current
     var selectedPrayer by remember { mutableStateOf("ALL") }
     var selectedMinutes by remember { mutableStateOf(15) }
     var customMinutesText by remember { mutableStateOf("") }
@@ -438,7 +440,8 @@ fun AddAlertDialog(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         uri?.let {
-            ringtoneUri = it.toString()
+            val savedPath = FileStorageHelper.saveUriToInternalStorage(context, it, "alerts_audio", "alert")
+            ringtoneUri = savedPath
             ringtoneName = it.lastPathSegment ?: "ملف صوتي مخصص"
         }
     }

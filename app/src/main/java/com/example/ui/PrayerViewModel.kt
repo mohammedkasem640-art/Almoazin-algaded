@@ -449,6 +449,7 @@ class PrayerViewModel(application: Application) : AndroidViewModel(application) 
             repository.updateSettings(settings.value.copy(notificationBarShowSeconds = enabled))
             val ctx = getApplication<Application>()
             NotificationHelper.updateOngoingPrayerNotification(ctx)
+            PrayerWidgetHelper.updateAllWidgets(ctx)
         }
     }
 
@@ -466,6 +467,16 @@ class PrayerViewModel(application: Application) : AndroidViewModel(application) 
             repository.updateSettings(settings.value.copy(widgetShowSeconds = enabled))
             val ctx = getApplication<Application>()
             PrayerWidgetHelper.updateAllWidgets(ctx)
+            NotificationHelper.updateOngoingPrayerNotification(ctx)
+        }
+    }
+
+    fun setWidgetThemeStyle(themeStyle: String) {
+        viewModelScope.launch {
+            repository.updateSettings(settings.value.copy(widgetThemeStyle = themeStyle))
+            val ctx = getApplication<Application>()
+            PrayerWidgetHelper.updateAllWidgets(ctx)
+            NotificationHelper.updateOngoingPrayerNotification(ctx)
         }
     }
 

@@ -132,6 +132,8 @@ object AlarmScheduler {
             PrayerApplication.instance.database.settingsDao().insertOrUpdate(
                 settings.copy(nextSalawatTimestamp = nextTime)
             )
+            PrayerWidgetHelper.updateAllWidgets(context)
+            NotificationHelper.updateOngoingPrayerNotification(context)
         }
     }
 

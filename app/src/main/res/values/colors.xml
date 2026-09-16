@@ -18,4 +18,22 @@
     <color name="widget_salawat_bg">#FF0B3326</color>
     <color name="widget_salawat_green">#FF4EBA86</color>
     <color name="widget_text_muted">#FFA0B2C6</color>
+
+    <!-- Emerald Mosque Theme (Image 1) -->
+    <color name="widget_emerald_bg">#FF062E25</color>
+    <color name="widget_emerald_banner">#FF0B4638</color>
+    <color name="widget_emerald_cell">#FF0B3A2F</color>
+    <color name="widget_emerald_gold">#FFF6C953</color>
+    <color name="widget_emerald_text_muted">#FF9ECEBA</color>
+    <color name="widget_emerald_badge">#FF08231C</color>
+    <color name="widget_emerald_arc">#FFE53935</color>
+
+    <!-- Burgundy Mosque Theme (Image 2) -->
+    <color name="widget_burgundy_bg">#FF450711</color>
+    <color name="widget_burgundy_banner">#FF610C1B</color>
+    <color name="widget_burgundy_cell">#FF520A16</color>
+    <color name="widget_burgundy_gold">#FFF6C953</color>
+    <color name="widget_burgundy_text_muted">#FFDEB5BA</color>
+    <color name="widget_burgundy_badge">#FF32040B</color>
+    <color name="widget_burgundy_arc">#FFF6C953</color>
 </resources>

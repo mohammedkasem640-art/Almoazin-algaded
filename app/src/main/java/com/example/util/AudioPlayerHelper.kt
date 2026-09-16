@@ -28,12 +28,6 @@ object AudioPlayerHelper {
 
         if (!uriString.isNullOrBlank()) {
             try {
-                val uri = if (uriString.startsWith("content://") || uriString.startsWith("file://")) {
-                    Uri.parse(uriString)
-                } else {
-                    Uri.fromFile(File(uriString))
-                }
-
                 val mp = MediaPlayer().apply {
                     setAudioAttributes(
                         AudioAttributes.Builder()
@@ -41,7 +35,21 @@ object AudioPlayerHelper {
                             .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
                             .build()
                     )
-                    setDataSource(context, uri)
+
+                    val directFile = File(uriString)
+                    if (directFile.exists()) {
+                        val fis = java.io.FileInputStream(directFile)
+                        setDataSource(fis.fd)
+                        fis.close()
+                    } else {
+                        val uri = if (uriString.startsWith("content://") || uriString.startsWith("file://")) {
+                            Uri.parse(uriString)
+                        } else {
+                            Uri.fromFile(directFile)
+                        }
+                        setDataSource(context, uri)
+                    }
+
                     prepare()
                     setOnCompletionListener {
                         isPlayingAudio = false

@@ -5,6 +5,7 @@ import com.example.data.local.PrayerDatabase
 import com.example.data.repository.PrayerRepository
 import com.example.util.AlarmScheduler
 import com.example.util.NotificationHelper
+import com.example.util.PrayerWidgetHelper
 
 class PrayerApplication : Application() {
     val database: PrayerDatabase by lazy { PrayerDatabase.getDatabase(this) }
@@ -15,6 +16,8 @@ class PrayerApplication : Application() {
         instance = this
         NotificationHelper.createNotificationChannels(this)
         AlarmScheduler.scheduleAll(this)
+        NotificationHelper.updateOngoingPrayerNotification(this)
+        PrayerWidgetHelper.updateAllWidgets(this)
     }
 
     companion object {

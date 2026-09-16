@@ -7,7 +7,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -24,7 +26,9 @@ import com.example.util.AppStrings
 @Composable
 fun LanguageTab(
     currentLanguage: String,
-    onLanguageSelected: (String) -> Unit
+    onLanguageSelected: (String) -> Unit,
+    isDarkMode: Boolean = false,
+    onThemeToggle: (Boolean) -> Unit = {}
 ) {
     val languages = listOf(
         Triple("ar", "العربية", "اللغة الافتراضية مع دعم كامل للاتجاه"),
@@ -38,6 +42,86 @@ fun LanguageTab(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        // Theme Selection (Light / Dark mode)
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .border(1.5.dp, IslamicGold.copy(alpha = 0.5f), RoundedCornerShape(18.dp)),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Icon(
+                        imageVector = if (isDarkMode) Icons.Default.DarkMode else Icons.Default.LightMode,
+                        contentDescription = null,
+                        tint = IslamicGold,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Text(
+                        text = if (currentLanguage == "ar") "مظهر التطبيق (فاتح / داكن)" else "App Theme (Light / Dark)",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // Light Mode Button
+                    Button(
+                        onClick = { onThemeToggle(false) },
+                        modifier = Modifier
+                            .weight(1f)
+                            .testTag("btn_theme_light"),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (!isDarkMode) IslamicGold else MaterialTheme.colorScheme.surfaceVariant,
+                            contentColor = if (!isDarkMode) Color.Black else MaterialTheme.colorScheme.onSurfaceVariant
+                        ),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(Icons.Default.LightMode, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            text = if (currentLanguage == "ar") "الوضع الفاتح" else "Light Mode",
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    // Dark Mode Button
+                    Button(
+                        onClick = { onThemeToggle(true) },
+                        modifier = Modifier
+                            .weight(1f)
+                            .testTag("btn_theme_dark"),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (isDarkMode) IslamicGold else MaterialTheme.colorScheme.surfaceVariant,
+                            contentColor = if (isDarkMode) Color.Black else MaterialTheme.colorScheme.onSurfaceVariant
+                        ),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(Icons.Default.DarkMode, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            text = if (currentLanguage == "ar") "الوضع الداكن" else "Dark Mode",
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+        }
+
+        HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)

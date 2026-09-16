@@ -45,12 +45,16 @@ import java.util.Calendar
 fun AlertsTab(
     alerts: List<PrayerAlertEntity>,
     language: String,
+    preAdhanAlertsEnabled: Boolean,
+    onSetPreAdhanAlertsEnabled: (Boolean) -> Unit,
     onAddAlert: (String, Int, String, String?, String) -> Unit,
+    onUpdateAlert: (PrayerAlertEntity) -> Unit,
     onToggleAlert: (PrayerAlertEntity) -> Unit,
     onDeleteAlert: (PrayerAlertEntity) -> Unit
 ) {
     val context = LocalContext.current
     var showAddDialog by remember { mutableStateOf(false) }
+    var alertToEdit by remember { mutableStateOf<PrayerAlertEntity?>(null) }
 
     // Check battery optimization status
     val pm = remember { context.getSystemService(Context.POWER_SERVICE) as? PowerManager }
@@ -73,6 +77,41 @@ fun AlertsTab(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        // Master Toggle Card for Pre-Adhan Alerts
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f))
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "تفعيل التنبيهات قبل الأذان",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp,
+                            color = IslamicGold
+                        )
+                        Text(
+                            text = "تشغيل أو إيقاف جميع التنبيهات المسبقة قبل مواعيد الصلوات",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Switch(
+                        checked = preAdhanAlertsEnabled,
+                        onCheckedChange = onSetPreAdhanAlertsEnabled,
+                        colors = SwitchDefaults.colors(checkedThumbColor = DigitalGreenLed)
+                    )
+                }
+            }
+        }
+
         // Top Action: Add New Custom Alert Button
         item {
             Button(
@@ -132,9 +171,40 @@ fun AlertsTab(
                     alert = alert,
                     language = language,
                     onToggle = { onToggleAlert(alert) },
+                    onEdit = { alertToEdit = alert },
                     onDelete = { onDeleteAlert(alert) },
                     onTest = {
                         AudioPlayerHelper.playAudioUri(context, alert.ringtoneUri)
+                    }
+                )
+            }
+        }
+
+        if (showAddDialog || alertToEdit != null) {
+            item {
+                AddAlertDialog(
+                    language = language,
+                    existingAlert = alertToEdit,
+                    onDismiss = {
+                        showAddDialog = false
+                        alertToEdit = null
+                    },
+                    onSave = { target, min, days, uri, name ->
+                        if (alertToEdit != null) {
+                            onUpdateAlert(
+                                alertToEdit!!.copy(
+                                    prayerTarget = target,
+                                    minutesBefore = min,
+                                    repeatDays = days,
+                                    ringtoneUri = uri,
+                                    ringtoneName = name
+                                )
+                            )
+                            alertToEdit = null
+                        } else {
+                            onAddAlert(target, min, days, uri, name)
+                            showAddDialog = false
+                        }
                     }
                 )
             }
@@ -283,6 +353,7 @@ fun AlertItemCard(
     alert: PrayerAlertEntity,
     language: String,
     onToggle: () -> Unit,
+    onEdit: () -> Unit,
     onDelete: () -> Unit,
     onTest: () -> Unit
 ) {
@@ -347,12 +418,18 @@ fun AlertItemCard(
                 horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                TextButton(onClick = onEdit) {
+                    Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("تعديل")
+                }
+                Spacer(Modifier.width(4.dp))
                 TextButton(onClick = onTest) {
                     Icon(Icons.Default.VolumeUp, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(4.dp))
                     Text(AppStrings.get("test_alert", language))
                 }
-                Spacer(Modifier.width(8.dp))
+                Spacer(Modifier.width(4.dp))
                 IconButton(onClick = onDelete) {
                     Icon(Icons.Default.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error)
                 }
@@ -399,20 +476,27 @@ fun PermissionRow(
 @Composable
 fun AddAlertDialog(
     language: String,
+    existingAlert: PrayerAlertEntity? = null,
     onDismiss: () -> Unit,
     onSave: (String, Int, String, String?, String) -> Unit
 ) {
     val context = LocalContext.current
-    var selectedPrayer by remember { mutableStateOf("ALL") }
-    var selectedMinutes by remember { mutableStateOf(15) }
+    var selectedPrayer by remember { mutableStateOf(existingAlert?.prayerTarget ?: "ALL") }
+    var selectedMinutes by remember { mutableStateOf(existingAlert?.minutesBefore ?: 15) }
     var customMinutesText by remember { mutableStateOf("") }
-    var ringtoneUri by remember { mutableStateOf<String?>(null) }
-    var ringtoneName by remember { mutableStateOf("نغمة التنبيه الافتراضية") }
+    var ringtoneUri by remember { mutableStateOf<String?>(existingAlert?.ringtoneUri) }
+    var ringtoneName by remember { mutableStateOf(existingAlert?.ringtoneName ?: "نغمة التنبيه الافتراضية") }
 
-    // Days selection state:
-    // Calendar.SUNDAY=1, MONDAY=2, TUESDAY=3, WEDNESDAY=4, THURSDAY=5, FRIDAY=6, SATURDAY=7
-    var isAllDays by remember { mutableStateOf(true) }
-    val selectedDays = remember { mutableStateListOf(1, 2, 3, 4, 5, 6, 7) }
+    val isAllDaysInit = existingAlert == null || existingAlert.repeatDays == "ALL"
+    var isAllDays by remember { mutableStateOf(isAllDaysInit) }
+    val selectedDays = remember {
+        val list = mutableStateListOf(1, 2, 3, 4, 5, 6, 7)
+        if (existingAlert != null && existingAlert.repeatDays != "ALL") {
+            list.clear()
+            existingAlert.repeatDays.split(",").mapNotNull { it.trim().toIntOrNull() }.forEach { list.add(it) }
+        }
+        list
+    }
 
     val daysList = listOf(
         Pair(Calendar.SATURDAY, if (language == "ar") "السبت" else "Sat"),

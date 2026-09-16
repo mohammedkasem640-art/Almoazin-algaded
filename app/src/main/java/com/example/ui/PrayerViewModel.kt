@@ -486,6 +486,51 @@ class PrayerViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    fun setPreAdhanAlertsEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            repository.updateSettings(settings.value.copy(preAdhanAlertsEnabled = enabled))
+            AlarmScheduler.scheduleAll(getApplication())
+        }
+    }
+
+    fun setTimeAlertsEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            repository.updateSettings(settings.value.copy(timeAlertsEnabled = enabled))
+            val ctx = getApplication<Application>()
+            if (enabled) {
+                NotificationHelper.updateOngoingPrayerNotification(ctx)
+            } else {
+                NotificationHelper.cancelOngoingNotification(ctx)
+            }
+        }
+    }
+
+    fun setAdhanSoundEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            repository.updateSettings(settings.value.copy(adhanSoundEnabled = enabled))
+        }
+    }
+
+    fun setRamadanCannonEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            repository.updateSettings(settings.value.copy(ramadanCannonEnabled = enabled))
+        }
+    }
+
+    fun setMesaharatyEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            repository.updateSettings(settings.value.copy(mesaharatyEnabled = enabled))
+            AlarmScheduler.scheduleAll(getApplication())
+        }
+    }
+
+    fun updateAlert(alert: PrayerAlertEntity) {
+        viewModelScope.launch {
+            repository.updateAlert(alert)
+            AlarmScheduler.scheduleAll(getApplication())
+        }
+    }
+
     fun refreshNotificationAndWidgets() {
         val ctx = getApplication<Application>()
         NotificationHelper.updateOngoingPrayerNotification(ctx)

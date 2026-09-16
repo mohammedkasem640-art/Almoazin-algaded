@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.sp
 import com.example.data.local.AppSettingsEntity
 import com.example.ui.adhan.AdhanScreenActivity
 import com.example.ui.theme.IslamicGold
+import com.example.ui.theme.DigitalGreenLed
 import com.example.util.AppStrings
 import com.example.util.FileStorageHelper
 import com.example.util.HijriCalendarHelper
@@ -35,6 +36,10 @@ import java.util.Date
 @Composable
 fun RamadanTab(
     settings: AppSettingsEntity,
+    ramadanCannonEnabled: Boolean,
+    mesaharatyEnabled: Boolean,
+    onSetRamadanCannonEnabled: (Boolean) -> Unit,
+    onSetMesaharatyEnabled: (Boolean) -> Unit,
     onSetCannonVideo: (String?) -> Unit,
     onSetMesaharatyVideo: (String?) -> Unit,
     onSetMesaharatyConfig: (String, String, Int) -> Unit
@@ -98,6 +103,48 @@ fun RamadanTab(
                         text = "يعمل مدفع الإفطار وتنبيه المسحراتي بدقة عالية ومزامنة كاملة مع الصلوات",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+
+        // Toggle Cards for Cannon and Mesaharaty
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+        ) {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(text = "تفعيل مدفع الإفطار", fontWeight = FontWeight.Bold, color = IslamicGold)
+                        Text(text = "تشغيل أو إيقاف عرض مدفع الإفطار عند أذان المغرب", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Switch(
+                        checked = ramadanCannonEnabled,
+                        onCheckedChange = onSetRamadanCannonEnabled,
+                        colors = SwitchDefaults.colors(checkedThumbColor = DigitalGreenLed)
+                    )
+                }
+
+                Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(text = "تفعيل تنبيه المسحراتي والسحور", fontWeight = FontWeight.Bold, color = IslamicGold)
+                        Text(text = "تشغيل أو إيقاف تنبيه وفيديو المسحراتي وقت السحور", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Switch(
+                        checked = mesaharatyEnabled,
+                        onCheckedChange = onSetMesaharatyEnabled,
+                        colors = SwitchDefaults.colors(checkedThumbColor = DigitalGreenLed)
                     )
                 }
             }

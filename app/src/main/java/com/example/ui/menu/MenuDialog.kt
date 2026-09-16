@@ -153,15 +153,20 @@ fun MenuDialog(
                         2 -> AlertsTab(
                             alerts = alerts,
                             language = settings.language,
+                            preAdhanAlertsEnabled = settings.preAdhanAlertsEnabled,
+                            onSetPreAdhanAlertsEnabled = { viewModel.setPreAdhanAlertsEnabled(it) },
                             onAddAlert = { target, min, days, uri, name ->
                                 viewModel.addAlert(target, min, days, uri, name)
                             },
+                            onUpdateAlert = { viewModel.updateAlert(it) },
                             onToggleAlert = { viewModel.toggleAlert(it) },
                             onDeleteAlert = { viewModel.deleteAlert(it) }
                         )
 
                         3 -> AdhanTab(
                             settings = settings,
+                            adhanSoundEnabled = settings.adhanSoundEnabled,
+                            onSetAdhanSoundEnabled = { viewModel.setAdhanSoundEnabled(it) },
                             onSetAdhanAudio = { prayer, uri -> viewModel.setPrayerAdhanAudio(prayer, uri) },
                             onSetPreAdhanSound = { prayer, uri -> viewModel.setPreAdhanSound(prayer, uri) },
                             onSetDuaVideo = { prayer, uri -> viewModel.setDuaVideo(prayer, uri) },
@@ -175,6 +180,10 @@ fun MenuDialog(
 
                         4 -> RamadanTab(
                             settings = settings,
+                            ramadanCannonEnabled = settings.ramadanCannonEnabled,
+                            mesaharatyEnabled = settings.mesaharatyEnabled,
+                            onSetRamadanCannonEnabled = { viewModel.setRamadanCannonEnabled(it) },
+                            onSetMesaharatyEnabled = { viewModel.setMesaharatyEnabled(it) },
                             onSetCannonVideo = { viewModel.setRamadanCannonVideo(it) },
                             onSetMesaharatyVideo = { viewModel.setMesaharatyVideo(it) },
                             onSetMesaharatyConfig = { mode, fixed, min ->

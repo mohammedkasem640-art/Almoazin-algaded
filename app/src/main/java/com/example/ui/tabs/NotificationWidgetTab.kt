@@ -32,6 +32,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.local.AppSettingsEntity
+import com.example.ui.theme.IslamicGold
+import com.example.ui.theme.DigitalGreenLed
 import com.example.receiver.MosqueStripWidgetProvider
 import com.example.receiver.PrayerTimesWidgetProvider
 import com.example.receiver.SalawatWidgetProvider
@@ -125,6 +127,39 @@ fun NotificationWidgetTab(
                     text = AppStrings.get("notif_widget_desc", lang),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+
+        // Master Toggle Card for Time Alerts / Ongoing Notification
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f))
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "تفعيل التنبيه بالوقت وإشعارات المتابعة",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp,
+                        color = IslamicGold
+                    )
+                    Text(
+                        text = "تشغيل أو إيقاف إشعار العد التنازلي المستمر ووقت الصلوات",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(
+                    checked = settings.timeAlertsEnabled,
+                    onCheckedChange = { viewModel.setTimeAlertsEnabled(it) },
+                    colors = SwitchDefaults.colors(checkedThumbColor = DigitalGreenLed)
                 )
             }
         }

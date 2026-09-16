@@ -87,7 +87,12 @@ abstract class PrayerDatabase : RoomDatabase() {
                     "widgetThemeStyle" to "TEXT NOT NULL DEFAULT 'EMERALD'",
                     "autoPlayDuaAfterAdhan" to "INTEGER NOT NULL DEFAULT 1",
                     "duaVideoFillScreen" to "INTEGER NOT NULL DEFAULT 1",
-                    "isDarkMode" to "INTEGER NOT NULL DEFAULT 0"
+                    "isDarkMode" to "INTEGER NOT NULL DEFAULT 0",
+                    "preAdhanAlertsEnabled" to "INTEGER NOT NULL DEFAULT 1",
+                    "timeAlertsEnabled" to "INTEGER NOT NULL DEFAULT 1",
+                    "adhanSoundEnabled" to "INTEGER NOT NULL DEFAULT 1",
+                    "ramadanCannonEnabled" to "INTEGER NOT NULL DEFAULT 1",
+                    "mesaharatyEnabled" to "INTEGER NOT NULL DEFAULT 1"
                 )
 
                 for ((col, def) in columnsToAdd) {

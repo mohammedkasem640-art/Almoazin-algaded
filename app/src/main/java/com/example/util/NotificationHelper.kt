@@ -1,5 +1,6 @@
 package com.example.util
 
+import android.annotation.SuppressLint
 import android.app.KeyguardManager
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -20,6 +21,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.util.Calendar
 
+@SuppressLint("MissingPermission")
 object NotificationHelper {
 
     const val CHANNEL_ADHAN = "channel_prayer_adhan_high"
@@ -113,7 +115,9 @@ object NotificationHelper {
     fun showAdhanNotification(
         context: Context,
         prayerName: String,
-        prayerId: String
+        prayerId: String,
+        ramadanCannonEnabled: Boolean = false,
+        cannonVideoUri: String? = null
     ) {
         val fullPrayerName = getFullPrayerName(prayerName)
 
@@ -130,19 +134,7 @@ object NotificationHelper {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val duaIntent = Intent(context, DuaVideoActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-            putExtra("EXTRA_PRAYER_ID", prayerId)
-            putExtra("EXTRA_PRAYER_NAME", fullPrayerName)
-        }
-        val duaPendingIntent = PendingIntent.getActivity(
-            context,
-            prayerId.hashCode() + 200,
-            duaIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
-        val notification = NotificationCompat.Builder(context, CHANNEL_ADHAN)
+        val builder = NotificationCompat.Builder(context, CHANNEL_ADHAN)
             .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
             .setContentTitle("حان الآن أذان $fullPrayerName")
             .setContentText("حي على الصلاة • حي على الفلاح")
@@ -153,11 +145,73 @@ object NotificationHelper {
             .setContentIntent(screenPendingIntent)
             .setFullScreenIntent(screenPendingIntent, true)
             .addAction(android.R.drawable.ic_menu_view, "عرض الشاشة", screenPendingIntent)
-            .addAction(android.R.drawable.ic_media_play, "دعاء بعد الأذان (أفقي)", duaPendingIntent)
+
+        if (prayerId == "MAGHRIB" && ramadanCannonEnabled) {
+            val cannonIntent = Intent(context, DuaVideoActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                putExtra("EXTRA_PRAYER_ID", "MAGHRIB")
+                putExtra("EXTRA_PRAYER_NAME", "مدفع الإفطار")
+                putExtra("EXTRA_VIDEO_URI", cannonVideoUri)
+            }
+            val cannonPendingIntent = PendingIntent.getActivity(
+                context,
+                prayerId.hashCode() + 500,
+                cannonIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            builder.addAction(android.R.drawable.ic_media_play, "💥 عرض مدفع الإفطار", cannonPendingIntent)
+        } else {
+            val duaIntent = Intent(context, DuaVideoActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                putExtra("EXTRA_PRAYER_ID", prayerId)
+                putExtra("EXTRA_PRAYER_NAME", fullPrayerName)
+            }
+            val duaPendingIntent = PendingIntent.getActivity(
+                context,
+                prayerId.hashCode() + 200,
+                duaIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            builder.addAction(android.R.drawable.ic_media_play, "دعاء بعد الأذان (أفقي)", duaPendingIntent)
+        }
+
+        try {
+            NotificationManagerCompat.from(context).notify(NOTIFICATION_ID_ADHAN, builder.build())
+        } catch (e: SecurityException) {
+            e.printStackTrace()
+        }
+    }
+
+    fun showMesaharatyNotification(context: Context, videoUri: String?) {
+        val prayerName = "السحور (المسحراتي)"
+        val screenIntent = Intent(context, DuaVideoActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            putExtra("EXTRA_PRAYER_ID", "MESAHARATY")
+            putExtra("EXTRA_PRAYER_NAME", prayerName)
+            putExtra("EXTRA_VIDEO_URI", videoUri)
+        }
+        val screenPendingIntent = PendingIntent.getActivity(
+            context,
+            9998,
+            screenIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val notification = NotificationCompat.Builder(context, CHANNEL_ALERTS)
+            .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
+            .setContentTitle("تنبيه السحور (المسحراتي)")
+            .setContentText("حان وقت السحور، استعد لصيام غد مبارك")
+            .setPriority(NotificationCompat.PRIORITY_MAX)
+            .setCategory(NotificationCompat.CATEGORY_ALARM)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setAutoCancel(true)
+            .setContentIntent(screenPendingIntent)
+            .setFullScreenIntent(screenPendingIntent, true)
+            .addAction(android.R.drawable.ic_media_play, "عرض فيديو المسحراتي", screenPendingIntent)
             .build()
 
         try {
-            NotificationManagerCompat.from(context).notify(NOTIFICATION_ID_ADHAN, notification)
+            NotificationManagerCompat.from(context).notify(1006, notification)
         } catch (e: SecurityException) {
             e.printStackTrace()
         }

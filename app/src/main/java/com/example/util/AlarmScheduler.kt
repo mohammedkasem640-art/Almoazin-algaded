@@ -71,33 +71,35 @@ object AlarmScheduler {
             }
 
             // 3. Schedule Pre-Adhan User Alerts
-            val currentDayOfWeek = Calendar.getInstance().get(Calendar.DAY_OF_WEEK)
-            for (alert in alerts) {
-                val repeatDaysList = alert.repeatDays.split(",").mapNotNull { it.trim().toIntOrNull() }
-                val isTodayActive = alert.repeatDays == "ALL" || repeatDaysList.contains(currentDayOfWeek)
+            if (settings.preAdhanAlertsEnabled) {
+                val currentDayOfWeek = Calendar.getInstance().get(Calendar.DAY_OF_WEEK)
+                for (alert in alerts) {
+                    val repeatDaysList = alert.repeatDays.split(",").mapNotNull { it.trim().toIntOrNull() }
+                    val isTodayActive = alert.repeatDays == "ALL" || repeatDaysList.contains(currentDayOfWeek)
 
-                if (isTodayActive) {
-                    for (prayer in listOf(todaySchedule.fajr, todaySchedule.dhuhr, todaySchedule.asr, todaySchedule.maghrib, todaySchedule.isha)) {
-                        val matchesPrayer = alert.prayerTarget == "ALL" ||
-                                alert.prayerTarget == prayer.id ||
-                                (alert.prayerTarget == "JUMUAH" && todaySchedule.isFriday && prayer.id == "JUMUAH")
+                    if (isTodayActive) {
+                        for (prayer in listOf(todaySchedule.fajr, todaySchedule.dhuhr, todaySchedule.asr, todaySchedule.maghrib, todaySchedule.isha)) {
+                            val matchesPrayer = alert.prayerTarget == "ALL" ||
+                                    alert.prayerTarget == prayer.id ||
+                                    (alert.prayerTarget == "JUMUAH" && todaySchedule.isFriday && prayer.id == "JUMUAH")
 
-                        if (matchesPrayer) {
-                            val alertTime = prayer.timestamp - (alert.minutesBefore * 60 * 1000L)
-                            if (alertTime > now) {
-                                val intent = Intent(context, PrayerAlarmReceiver::class.java).apply {
-                                    action = ACTION_PRE_ALERT
-                                    putExtra("EXTRA_PRAYER_NAME", prayer.arabicName)
-                                    putExtra("EXTRA_MINUTES_BEFORE", alert.minutesBefore)
-                                    putExtra("EXTRA_RINGTONE_URI", alert.ringtoneUri)
+                            if (matchesPrayer) {
+                                val alertTime = prayer.timestamp - (alert.minutesBefore * 60 * 1000L)
+                                if (alertTime > now) {
+                                    val intent = Intent(context, PrayerAlarmReceiver::class.java).apply {
+                                        action = ACTION_PRE_ALERT
+                                        putExtra("EXTRA_PRAYER_NAME", prayer.arabicName)
+                                        putExtra("EXTRA_MINUTES_BEFORE", alert.minutesBefore)
+                                        putExtra("EXTRA_RINGTONE_URI", alert.ringtoneUri)
+                                    }
+                                    val pi = PendingIntent.getBroadcast(
+                                        context,
+                                        (alert.id * 1000 + prayer.id.hashCode()).hashCode(),
+                                        intent,
+                                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                                    )
+                                    setExactAlarm(alarmManager, alertTime, pi)
                                 }
-                                val pi = PendingIntent.getBroadcast(
-                                    context,
-                                    (alert.id * 1000 + prayer.id.hashCode()).hashCode(),
-                                    intent,
-                                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                                )
-                                setExactAlarm(alarmManager, alertTime, pi)
                             }
                         }
                     }
@@ -107,6 +109,44 @@ object AlarmScheduler {
             // 4. Schedule Salawat
             if (settings.salawatEnabled) {
                 scheduleSalawat(context, settings)
+            }
+
+            // 5. Schedule Mesaharaty / Suhoor Alert
+            if (settings.mesaharatyEnabled) {
+                val mesaharatyTime = when (settings.mesaharatyMode) {
+                    "FIXED_TIME" -> {
+                        val parts = settings.mesaharatyFixedTime.split(":")
+                        val hour = parts.getOrNull(0)?.toIntOrNull() ?: 2
+                        val minute = parts.getOrNull(1)?.toIntOrNull() ?: 30
+                        Calendar.getInstance().apply {
+                            set(Calendar.HOUR_OF_DAY, hour)
+                            set(Calendar.MINUTE, minute)
+                            set(Calendar.SECOND, 0)
+                            if (timeInMillis <= now) {
+                                add(Calendar.DAY_OF_YEAR, 1)
+                            }
+                        }.timeInMillis
+                    }
+                    else -> { // "BEFORE_FAJR"
+                        val t1 = todaySchedule.fajr.timestamp - (settings.mesaharatyBeforeFajrMinutes * 60 * 1000L)
+                        if (t1 > now) t1 else {
+                            tomorrowSchedule.fajr.timestamp - (settings.mesaharatyBeforeFajrMinutes * 60 * 1000L)
+                        }
+                    }
+                }
+
+                if (mesaharatyTime > now) {
+                    val intent = Intent(context, PrayerAlarmReceiver::class.java).apply {
+                        action = ACTION_MESAHARATY
+                    }
+                    val pi = PendingIntent.getBroadcast(
+                        context,
+                        REQUEST_CODE_MESAHARATY,
+                        intent,
+                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                    )
+                    setExactAlarm(alarmManager, mesaharatyTime, pi)
+                }
             }
         }
     }

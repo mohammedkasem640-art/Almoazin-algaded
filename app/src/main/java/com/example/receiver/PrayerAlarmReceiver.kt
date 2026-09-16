@@ -27,13 +27,20 @@ class PrayerAlarmReceiver : BroadcastReceiver() {
                 val prayerId = intent.getStringExtra("EXTRA_PRAYER_ID") ?: "FAJR"
                 val prayerName = intent.getStringExtra("EXTRA_PRAYER_NAME") ?: "الصلاة"
 
-                NotificationHelper.showAdhanNotification(context, prayerName, prayerId)
-                AdhanAudioService.start(context, prayerId, prayerName)
+                CoroutineScope(Dispatchers.IO).launch {
+                    val db = PrayerApplication.instance.database
+                    val settings = db.settingsDao().getSettingsDirect() ?: AppSettingsEntity()
 
-                // Reschedule next prayer times
-                AlarmScheduler.scheduleAll(context)
-                PrayerWidgetHelper.updateAllWidgets(context)
-                NotificationHelper.updateOngoingPrayerNotification(context)
+                    NotificationHelper.showAdhanNotification(context, prayerName, prayerId, settings.ramadanCannonEnabled, settings.ramadanCannonVideoUri)
+                    if (settings.adhanSoundEnabled) {
+                        AdhanAudioService.start(context, prayerId, prayerName)
+                    }
+
+                    // Reschedule next prayer times
+                    AlarmScheduler.scheduleAll(context)
+                    PrayerWidgetHelper.updateAllWidgets(context)
+                    NotificationHelper.updateOngoingPrayerNotification(context)
+                }
             }
 
             AlarmScheduler.ACTION_PRE_ALERT -> {
@@ -41,11 +48,18 @@ class PrayerAlarmReceiver : BroadcastReceiver() {
                 val minutesBefore = intent.getIntExtra("EXTRA_MINUTES_BEFORE", 15)
                 val ringtoneUri = intent.getStringExtra("EXTRA_RINGTONE_URI")
 
-                NotificationHelper.showAlertNotification(context, prayerName, minutesBefore, ringtoneUri)
-                AudioPlayerHelper.playAudioUri(context, ringtoneUri)
+                CoroutineScope(Dispatchers.IO).launch {
+                    val db = PrayerApplication.instance.database
+                    val settings = db.settingsDao().getSettingsDirect() ?: AppSettingsEntity()
 
-                // Reschedule alarms
-                AlarmScheduler.scheduleAll(context)
+                    if (settings.preAdhanAlertsEnabled) {
+                        NotificationHelper.showAlertNotification(context, prayerName, minutesBefore, ringtoneUri)
+                        if (settings.adhanSoundEnabled) {
+                            AudioPlayerHelper.playAudioUri(context, ringtoneUri)
+                        }
+                    }
+                    AlarmScheduler.scheduleAll(context)
+                }
             }
 
             AlarmScheduler.ACTION_SALAWAT -> {
@@ -83,8 +97,18 @@ class PrayerAlarmReceiver : BroadcastReceiver() {
             }
 
             AlarmScheduler.ACTION_MESAHARATY -> {
-                NotificationHelper.showAlertNotification(context, "السحور (المسحراتي)", 0)
-                AlarmScheduler.scheduleAll(context)
+                CoroutineScope(Dispatchers.IO).launch {
+                    val db = PrayerApplication.instance.database
+                    val settings = db.settingsDao().getSettingsDirect() ?: AppSettingsEntity()
+
+                    if (settings.mesaharatyEnabled) {
+                        NotificationHelper.showMesaharatyNotification(context, settings.mesaharatyVideoUri)
+                        if (settings.adhanSoundEnabled) {
+                            AudioPlayerHelper.playAudioUri(context, settings.mesaharatyVideoUri)
+                        }
+                    }
+                    AlarmScheduler.scheduleAll(context)
+                }
             }
         }
     }

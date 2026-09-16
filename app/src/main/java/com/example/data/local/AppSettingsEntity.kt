@@ -89,5 +89,12 @@ data class AppSettingsEntity(
     val duaVideoFillScreen: Boolean = true,
 
     // App Theme (Light by default)
-    val isDarkMode: Boolean = false
+    val isDarkMode: Boolean = false,
+
+    // User requested toggles
+    val preAdhanAlertsEnabled: Boolean = true,
+    val timeAlertsEnabled: Boolean = true,
+    val adhanSoundEnabled: Boolean = true,
+    val ramadanCannonEnabled: Boolean = true,
+    val mesaharatyEnabled: Boolean = true
 )

@@ -28,6 +28,7 @@ import com.example.data.local.AppSettingsEntity
 import com.example.ui.adhan.AdhanScreenActivity
 import com.example.ui.adhan.DuaVideoActivity
 import com.example.ui.theme.IslamicGold
+import com.example.ui.theme.DigitalGreenLed
 import com.example.util.AppStrings
 import com.example.util.AudioPlayerHelper
 import com.example.util.FileStorageHelper
@@ -37,6 +38,8 @@ import com.example.util.ZipExtractor
 @Composable
 fun AdhanTab(
     settings: AppSettingsEntity,
+    adhanSoundEnabled: Boolean,
+    onSetAdhanSoundEnabled: (Boolean) -> Unit,
     onSetAdhanAudio: (String, String?) -> Unit,
     onSetPreAdhanSound: (String, String?) -> Unit,
     onSetDuaVideo: (String, String?) -> Unit,
@@ -147,6 +150,38 @@ fun AdhanTab(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(18.dp)
     ) {
+        // Master Toggle Card for Adhan Sound
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f))
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "تفعيل صوت الأذان",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp,
+                        color = IslamicGold
+                    )
+                    Text(
+                        text = "تشغيل أو إيقاف صوت الأذان عند حلول وقت الصلاة",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(
+                    checked = adhanSoundEnabled,
+                    onCheckedChange = onSetAdhanSoundEnabled,
+                    colors = SwitchDefaults.colors(checkedThumbColor = DigitalGreenLed)
+                )
+            }
+        }
         // Prayer Selector Tabs
         ScrollableTabRow(
             selectedTabIndex = prayers.indexOfFirst { it.first == activePrayerTab }.coerceAtLeast(0),

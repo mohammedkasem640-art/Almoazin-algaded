@@ -31,7 +31,6 @@ data class PrayerSchedule(
 
 object PrayerTimesCalculator {
 
-    // Calculation Method definitions
     enum class CalculationMethod(
         val code: String,
         val arabicName: String,
@@ -82,6 +81,7 @@ object PrayerTimesCalculator {
         val year = cal.get(Calendar.YEAR)
         val month = cal.get(Calendar.MONTH) + 1
         val day = cal.get(Calendar.DAY_OF_MONTH)
+        val dayOfYear = cal.get(Calendar.DAY_OF_YEAR)
         val isFriday = cal.get(Calendar.DAY_OF_WEEK) == Calendar.FRIDAY
 
         val lat = settings.latitude
@@ -91,39 +91,51 @@ object PrayerTimesCalculator {
         val method = CalculationMethod.fromCode(settings.calcMethod)
         val madhab = AsrMadhab.fromCode(settings.asrMadhab)
 
-        // Julian Date
-        val jd = julianDate(year, month, day) - lng / (15.0 * 24.0)
+        // NOAA Solar Calculation Algorithm (Extremely High Precision)
+        // Fractional year gamma in radians
+        val gamma = 2.0 * Math.PI / 365.0 * (dayOfYear - 1)
 
-        // Sun calculations
-        val d = jd - 2451545.0
-        val g = fixAngle(357.529 + 0.98560028 * d)
-        val q = fixAngle(280.459 + 0.98564736 * d)
-        val l = fixAngle(q + 1.915 * sin(d2r(g)) + 0.020 * sin(d2r(2 * g)))
+        // Equation of Time in minutes
+        val eqtMinutes = 229.18 * (0.000075 +
+                0.001868 * cos(gamma) - 0.032077 * sin(gamma) -
+                0.014615 * cos(2.0 * gamma) - 0.040849 * sin(2.0 * gamma))
+        val eqtHours = eqtMinutes / 60.0
 
-        val e = 23.439 - 0.00000036 * d
-        val ra = fixAngle(r2d(atan2(cos(d2r(e)) * sin(d2r(l)), cos(d2r(l))))) / 15.0
+        // Sun Declination in radians
+        val declRad = 0.006918 -
+                0.399912 * cos(gamma) + 0.070257 * sin(gamma) -
+                0.006758 * cos(2.0 * gamma) + 0.000907 * sin(2.0 * gamma) -
+                0.002697 * cos(3.0 * gamma) + 0.000148 * sin(3.0 * gamma)
+        val declDeg = r2d(declRad)
 
-        val eqt = q / 15.0 - fixHour(ra)
-        val decl = r2d(asin(sin(d2r(e)) * sin(d2r(l))))
+        // Dhuhr (Solar Noon) time in hours (local standard time)
+        val dhuhrBase = 12.0 + tz - (lng / 15.0) - eqtHours
 
-        // Dhuhr
-        val dhuhrBase = fixHour(12.0 + tz - lng / 15.0 - eqt)
+        // Helper function for sun angle time
+        fun sunAngleTime(angleDeg: Double): Double {
+            val cosH = (cos(d2r(90.0 + angleDeg)) - sin(d2r(lat)) * sin(d2r(declDeg))) /
+                    (cos(d2r(lat)) * cos(d2r(declDeg)))
+            if (cosH > 1.0) return 0.0
+            if (cosH < -1.0) return 12.0
+            return r2d(acos(cosH)) / 15.0
+        }
 
-        // Sunrise & Sunset
-        val sunriseAngle = 0.833
-        val sunriseTime = dhuhrBase - sunAngleTime(sunriseAngle, lat, decl)
-        val sunsetTime = dhuhrBase + sunAngleTime(sunriseAngle, lat, decl)
+        // Sunrise & Sunset (Standard atmospheric refraction 34' + semi-diameter 16' = 50' = 0.833333°)
+        val sunriseAngle = 0.833333
+        val semiArc = sunAngleTime(sunriseAngle)
+        val sunriseTime = dhuhrBase - semiArc
+        val sunsetTime = dhuhrBase + semiArc
 
         // Fajr
-        val fajrTime = dhuhrBase - sunAngleTime(method.fajrAngle, lat, decl)
+        val fajrTime = dhuhrBase - sunAngleTime(method.fajrAngle)
 
-        // Asr
-        val asrElevation = r2d(atan(1.0 / (madhab.shadowFactor + tan(d2r(abs(lat - decl))))))
-        val asrTime = dhuhrBase + sunAngleTime(-asrElevation, lat, decl)
+        // Asr (Shadow factor 1 for Shafi/Maliki/Hanbali, 2 for Hanafi)
+        val altitudeAtAsr = r2d(atan(1.0 / (madhab.shadowFactor + tan(d2r(abs(lat - declDeg))))))
+        val asrTime = dhuhrBase + sunAngleTime(-altitudeAtAsr)
 
         // Maghrib
         val maghribTime = if (method.maghribAngle != null) {
-            dhuhrBase + sunAngleTime(method.maghribAngle, lat, decl)
+            dhuhrBase + sunAngleTime(method.maghribAngle)
         } else {
             sunsetTime
         }
@@ -132,7 +144,7 @@ object PrayerTimesCalculator {
         val ishaTime = if (method.ishaMinutesAfterMaghrib != null) {
             maghribTime + (method.ishaMinutesAfterMaghrib / 60.0)
         } else {
-            dhuhrBase + sunAngleTime(method.ishaAngle, lat, decl)
+            dhuhrBase + sunAngleTime(method.ishaAngle)
         }
 
         // Apply Manual Adjustments
@@ -143,7 +155,7 @@ object PrayerTimesCalculator {
         val maghribFinal = adjustTime(maghribTime, settings.adjMaghrib)
         val ishaFinal = adjustTime(ishaTime, settings.adjIsha)
 
-        // Build PrayerTime objects
+        // Build PrayerTime objects with second-level high precision
         val fajrPT = toPrayerTime("FAJR", "الفجر", "Fajr", "Fadjr", cal, fajrFinal)
         val sunrisePT = toPrayerTime("SUNRISE", "الشروق", "Sunrise", "Lever", cal, sunriseFinal)
         val dhuhrPT = if (isFriday) {
@@ -162,7 +174,6 @@ object PrayerTimesCalculator {
         var diff = 0L
 
         if (next == null) {
-            // Next is tomorrow's Fajr
             val tomorrowFajr = fajrPT.timestamp + 24 * 3600 * 1000L
             next = fajrPT.copy(timestamp = tomorrowFajr)
             diff = max(0L, tomorrowFajr - now)
@@ -196,14 +207,15 @@ object PrayerTimesCalculator {
         baseCal: Calendar,
         hourDecimal: Double
     ): PrayerTime {
-        val totalMinutes = (hourDecimal * 60.0).roundToInt()
-        val h = ((totalMinutes / 60) % 24 + 24) % 24
-        val m = ((totalMinutes % 60) + 60) % 60
+        val totalSeconds = (hourDecimal * 3600.0).roundToLong()
+        val h = (((totalSeconds / 3600) % 24) + 24) % 24
+        val m = (((totalSeconds % 3600) / 60) + 60) % 60
+        val s = (((totalSeconds % 60)) + 60) % 60
 
         val cal = baseCal.clone() as Calendar
-        cal.set(Calendar.HOUR_OF_DAY, h)
-        cal.set(Calendar.MINUTE, m)
-        cal.set(Calendar.SECOND, 0)
+        cal.set(Calendar.HOUR_OF_DAY, h.toInt())
+        cal.set(Calendar.MINUTE, m.toInt())
+        cal.set(Calendar.SECOND, s.toInt())
         cal.set(Calendar.MILLISECOND, 0)
 
         return PrayerTime(
@@ -212,8 +224,8 @@ object PrayerTimesCalculator {
             englishName = en,
             frenchName = fr,
             timestamp = cal.timeInMillis,
-            hour24 = h,
-            minute = m
+            hour24 = h.toInt(),
+            minute = m.toInt()
         )
     }
 
@@ -227,40 +239,6 @@ object PrayerTimesCalculator {
             offsetHours -= 1.0
         }
         return offsetHours
-    }
-
-    private fun sunAngleTime(angle: Double, lat: Double, decl: Double): Double {
-        val cosH = (sin(d2r(-angle)) - sin(d2r(lat)) * sin(d2r(decl))) /
-                (cos(d2r(lat)) * cos(d2r(decl)))
-        if (cosH > 1.0 || cosH < -1.0) {
-            // Extreme latitude, clamp
-            return if (cosH > 1.0) 0.0 else 12.0
-        }
-        return r2d(acos(cosH)) / 15.0
-    }
-
-    private fun julianDate(year: Int, month: Int, day: Int): Double {
-        var y = year
-        var m = month
-        if (m <= 2) {
-            y -= 1
-            m += 12
-        }
-        val a = floor(y / 100.0)
-        val b = 2 - a + floor(a / 4.0)
-        return floor(365.25 * (y + 4716)) + floor(30.6001 * (m + 1)) + day + b - 1524.5
-    }
-
-    private fun fixAngle(a: Double): Double {
-        var res = a - 360.0 * floor(a / 360.0)
-        if (res < 0) res += 360.0
-        return res
-    }
-
-    private fun fixHour(h: Double): Double {
-        var res = h - 24.0 * floor(h / 24.0)
-        if (res < 0) res += 24.0
-        return res
     }
 
     private fun d2r(d: Double): Double = d * Math.PI / 180.0

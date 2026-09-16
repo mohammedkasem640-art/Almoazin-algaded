@@ -154,15 +154,19 @@ fun DuaVideoScreen(
 
     // Determine video URI (per prayer or direct)
     val videoUri = remember(explicitVideoUri, prayerId, settings) {
-        if (!explicitVideoUri.isNullOrBlank()) explicitVideoUri
-        else when (prayerId) {
-            "FAJR" -> settings.duaVideoFajr
-            "DHUHR" -> settings.duaVideoDhuhr
-            "ASR" -> settings.duaVideoAsr
-            "MAGHRIB" -> settings.duaVideoMaghrib
-            "ISHA" -> settings.duaVideoIsha
-            "JUMUAH" -> settings.duaVideoJumuah
-            else -> null
+        when {
+            !explicitVideoUri.isNullOrBlank() -> explicitVideoUri
+            prayerId == "MAGHRIB" && settings.ramadanCannonEnabled && !settings.ramadanCannonVideoUri.isNullOrBlank() -> settings.ramadanCannonVideoUri
+            prayerId == "MESAHARATY" && !settings.mesaharatyVideoUri.isNullOrBlank() -> settings.mesaharatyVideoUri
+            else -> when (prayerId) {
+                "FAJR" -> settings.duaVideoFajr
+                "DHUHR" -> settings.duaVideoDhuhr
+                "ASR" -> settings.duaVideoAsr
+                "MAGHRIB" -> settings.duaVideoMaghrib
+                "ISHA" -> settings.duaVideoIsha
+                "JUMUAH" -> settings.duaVideoJumuah
+                else -> null
+            }
         }
     }
 

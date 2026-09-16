@@ -2,6 +2,59 @@ package com.example.data.local
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import java.util.TimeZone
+
+private fun getDefaultCityName(): String {
+    val tz = TimeZone.getDefault().id
+    return when {
+        tz.contains("Cairo") || tz.contains("Egypt") -> "القاهرة"
+        tz.contains("Dubai") || tz.contains("Abu_Dhabi") -> "دبي"
+        tz.contains("Riyadh") || tz.contains("Makkah") -> "مكة المكرمة"
+        tz.contains("Baghdad") -> "بغداد"
+        tz.contains("Amman") -> "عمان"
+        tz.contains("Casablanca") || tz.contains("Rabat") -> "الرباط"
+        else -> "القاهرة"
+    }
+}
+
+private fun getDefaultLatitude(): Double {
+    val tz = TimeZone.getDefault().id
+    return when {
+        tz.contains("Cairo") || tz.contains("Egypt") -> 30.0444
+        tz.contains("Dubai") || tz.contains("Abu_Dhabi") -> 25.2048
+        tz.contains("Riyadh") || tz.contains("Makkah") -> 21.4225
+        tz.contains("Baghdad") -> 33.3152
+        tz.contains("Amman") -> 31.9454
+        tz.contains("Casablanca") || tz.contains("Rabat") -> 34.0209
+        else -> 30.0444
+    }
+}
+
+private fun getDefaultLongitude(): Double {
+    val tz = TimeZone.getDefault().id
+    return when {
+        tz.contains("Cairo") || tz.contains("Egypt") -> 31.2357
+        tz.contains("Dubai") || tz.contains("Abu_Dhabi") -> 55.2708
+        tz.contains("Riyadh") || tz.contains("Makkah") -> 39.8262
+        tz.contains("Baghdad") -> 44.3661
+        tz.contains("Amman") -> 35.9284
+        tz.contains("Casablanca") || tz.contains("Rabat") -> -6.8416
+        else -> 31.2357
+    }
+}
+
+private fun getDefaultCalcMethod(): String {
+    val tz = TimeZone.getDefault().id
+    return when {
+        tz.contains("Cairo") || tz.contains("Egypt") -> "EGYPT"
+        tz.contains("Dubai") || tz.contains("Abu_Dhabi") -> "DUBAI"
+        tz.contains("Riyadh") || tz.contains("Makkah") -> "UMM_AL_QURA"
+        tz.contains("Baghdad") -> "MWL"
+        tz.contains("Amman") -> "MWL"
+        tz.contains("Casablanca") || tz.contains("Rabat") -> "FRANCE"
+        else -> "EGYPT"
+    }
+}
 
 @Entity(tableName = "app_settings")
 data class AppSettingsEntity(
@@ -12,12 +65,12 @@ data class AppSettingsEntity(
     
     // Location & Calculation
     val locationMode: String = "MANUAL", // "MANUAL", "AUTO"
-    val cityName: String = "مكة المكرمة",
-    val latitude: Double = 21.4225,
-    val longitude: Double = 39.8262,
-    val timezoneId: String = "Asia/Riyadh",
+    val cityName: String = getDefaultCityName(),
+    val latitude: Double = getDefaultLatitude(),
+    val longitude: Double = getDefaultLongitude(),
+    val timezoneId: String = TimeZone.getDefault().id,
     val dstMode: Int = 0, // 0=off, 1=on, -1=auto
-    val calcMethod: String = "UMM_AL_QURA",
+    val calcMethod: String = getDefaultCalcMethod(),
     val asrMadhab: String = "SHAFI", // "SHAFI", "MALIKI", "HANBALI", "HANAFI"
     
     // Manual Prayer Time Adjustments (Minutes)

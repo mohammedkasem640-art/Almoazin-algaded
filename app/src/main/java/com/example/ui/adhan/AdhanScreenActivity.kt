@@ -124,14 +124,19 @@ class AdhanScreenActivity : ComponentActivity() {
                 val s = withContext(Dispatchers.IO) {
                     PrayerApplication.instance.database.settingsDao().getSettingsDirect()
                 }
-                val videoUri = when (rawPrayerId) {
-                    "FAJR" -> s?.duaVideoFajr
-                    "DHUHR" -> s?.duaVideoDhuhr
-                    "ASR" -> s?.duaVideoAsr
-                    "MAGHRIB" -> s?.duaVideoMaghrib
-                    "ISHA" -> s?.duaVideoIsha
-                    "JUMUAH" -> s?.duaVideoJumuah
-                    else -> null
+                val videoUri = when {
+                    !directVideoUri.isNullOrBlank() -> directVideoUri
+                    rawPrayerId == "MAGHRIB" && s?.ramadanCannonEnabled == true && !s.ramadanCannonVideoUri.isNullOrBlank() -> s.ramadanCannonVideoUri
+                    rawPrayerId == "MESAHARATY" -> s?.mesaharatyVideoUri
+                    else -> when (rawPrayerId) {
+                        "FAJR" -> s?.duaVideoFajr
+                        "DHUHR" -> s?.duaVideoDhuhr
+                        "ASR" -> s?.duaVideoAsr
+                        "MAGHRIB" -> s?.duaVideoMaghrib
+                        "ISHA" -> s?.duaVideoIsha
+                        "JUMUAH" -> s?.duaVideoJumuah
+                        else -> null
+                    }
                 }
                 val intent = Intent(this@AdhanScreenActivity, DuaVideoActivity::class.java).apply {
                     flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP

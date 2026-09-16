@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.local.AppSettingsEntity
 import com.example.ui.adhan.AdhanScreenActivity
+import com.example.ui.adhan.DuaVideoActivity
 import com.example.ui.theme.IslamicGold
 import com.example.ui.theme.DigitalGreenLed
 import com.example.util.AppStrings
@@ -191,10 +192,10 @@ fun RamadanTab(
 
                     OutlinedButton(
                         onClick = {
-                            val intent = Intent(context, AdhanScreenActivity::class.java).apply {
+                            val intent = Intent(context, DuaVideoActivity::class.java).apply {
+                                putExtra("EXTRA_PRAYER_ID", "MAGHRIB")
                                 putExtra("EXTRA_PRAYER_NAME", "مدفع الإفطار")
                                 putExtra("EXTRA_VIDEO_URI", settings.ramadanCannonVideoUri)
-                                putExtra("EXTRA_IS_ALERT", false)
                             }
                             context.startActivity(intent)
                         },
@@ -249,10 +250,10 @@ fun RamadanTab(
 
                     OutlinedButton(
                         onClick = {
-                            val intent = Intent(context, AdhanScreenActivity::class.java).apply {
+                            val intent = Intent(context, DuaVideoActivity::class.java).apply {
+                                putExtra("EXTRA_PRAYER_ID", "MESAHARATY")
                                 putExtra("EXTRA_PRAYER_NAME", "المسحراتي (تنبيه السحور)")
                                 putExtra("EXTRA_VIDEO_URI", settings.mesaharatyVideoUri)
-                                putExtra("EXTRA_IS_ALERT", false)
                             }
                             context.startActivity(intent)
                         },

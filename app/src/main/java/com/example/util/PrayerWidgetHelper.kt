@@ -1,0 +1,225 @@
+package com.example.util
+
+import android.app.PendingIntent
+import android.appwidget.AppWidgetManager
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
+import android.os.Build
+import android.view.View
+import android.widget.RemoteViews
+import com.example.MainActivity
+import com.example.PrayerApplication
+import com.example.R
+import com.example.data.local.AppSettingsEntity
+import com.example.receiver.WidgetActionReceiver
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
+
+object PrayerWidgetHelper {
+
+    fun formatDuration(millis: Long, includeSeconds: Boolean = true): String {
+        val totalSec = (millis.coerceAtLeast(0L) / 1000).toInt()
+        val hours = totalSec / 3600
+        val minutes = (totalSec % 3600) / 60
+        val seconds = totalSec % 60
+
+        return if (includeSeconds) {
+            String.format(Locale.getDefault(), "%02d:%02d:%02d", hours, minutes, seconds)
+        } else {
+            String.format(Locale.getDefault(), "%02d:%02d", hours, minutes)
+        }
+    }
+
+    fun formatSalawatTimer(millis: Long): String {
+        val totalSec = (millis.coerceAtLeast(0L) / 1000).toInt()
+        val minutes = totalSec / 60
+        val seconds = totalSec % 60
+        return String.format(Locale.getDefault(), "%02d:%02d", minutes, seconds)
+    }
+
+    fun formatClockTime(hour24: Int, minute: Int, is24h: Boolean): String {
+        return if (is24h) {
+            String.format(Locale.getDefault(), "%02d:%02d", hour24, minute)
+        } else {
+            val h = if (hour24 == 0) 12 else if (hour24 > 12) hour24 - 12 else hour24
+            val ampm = if (hour24 >= 12) "م" else "ص"
+            String.format(Locale.getDefault(), "%02d:%02d %s", h, minute, ampm)
+        }
+    }
+
+    fun getCurrentAndNextPrayer(schedule: PrayerSchedule, nowMillis: Long): Pair<PrayerTime, PrayerTime> {
+        val times = listOf(
+            schedule.fajr,
+            schedule.dhuhr,
+            schedule.asr,
+            schedule.maghrib,
+            schedule.isha
+        )
+
+        // Find current (most recently passed) prayer
+        var current = schedule.isha
+        var next = schedule.fajr
+
+        for (i in times.indices) {
+            if (nowMillis >= times[i].timestamp) {
+                current = times[i]
+                next = if (i + 1 < times.size) times[i + 1] else schedule.fajr
+            }
+        }
+
+        // If before Fajr today, current is yesterday's Isha, next is Fajr
+        if (nowMillis < schedule.fajr.timestamp) {
+            current = schedule.isha
+            next = schedule.fajr
+        }
+
+        return Pair(current, next)
+    }
+
+    fun buildWidgetRemoteViews(context: Context, settings: AppSettingsEntity): RemoteViews {
+        val views = RemoteViews(context.packageName, R.layout.widget_prayer_times)
+        val now = Calendar.getInstance()
+        val schedule = PrayerTimesCalculator.calculateTimes(now.time, settings)
+        val (currentPrayer, nextPrayer) = getCurrentAndNextPrayer(schedule, now.timeInMillis)
+
+        // City
+        views.setTextViewText(R.id.tv_widget_city, settings.cityName)
+        views.setTextViewText(R.id.tv_widget_title, "مواقيت الصلاة 🕌")
+
+        // Countdown to next prayer
+        val diffMs = (nextPrayer.timestamp - now.timeInMillis).coerceAtLeast(0L)
+        val countdownStr = formatDuration(diffMs, settings.widgetShowSeconds)
+        views.setTextViewText(R.id.tv_widget_countdown_label, "يتبقى $countdownStr على")
+        views.setTextViewText(R.id.tv_widget_next_prayer_name, nextPrayer.arabicName)
+
+        // Dates
+        val hijriDate = HijriCalendarHelper.getHijriDate(now.time, settings.hijriAdjustmentDays)
+        val dayOfWeekAr = SimpleDateFormat("EEEE", Locale("ar")).format(now.time)
+        val hijriStr = "$dayOfWeekAr ${hijriDate.formattedAr}"
+        val gregFormat = SimpleDateFormat("yyyy-M-d", Locale.ENGLISH)
+        views.setTextViewText(R.id.tv_widget_hijri, hijriStr)
+        views.setTextViewText(R.id.tv_widget_gregorian, gregFormat.format(now.time))
+
+        // Prayer Columns
+        val is24 = settings.timeFormat24
+        views.setTextViewText(R.id.tv_col_fajr_time, formatClockTime(schedule.fajr.hour24, schedule.fajr.minute, is24))
+        views.setTextViewText(R.id.tv_col_dhuhr_time, formatClockTime(schedule.dhuhr.hour24, schedule.dhuhr.minute, is24))
+        views.setTextViewText(R.id.tv_col_asr_time, formatClockTime(schedule.asr.hour24, schedule.asr.minute, is24))
+        views.setTextViewText(R.id.tv_col_maghrib_time, formatClockTime(schedule.maghrib.hour24, schedule.maghrib.minute, is24))
+        views.setTextViewText(R.id.tv_col_isha_time, formatClockTime(schedule.isha.hour24, schedule.isha.minute, is24))
+
+        // Badges: "الحالية" and "القادمة"
+        views.setViewVisibility(R.id.tv_col_fajr_badge, if (schedule.fajr.id == currentPrayer.id) View.VISIBLE else if (schedule.fajr.id == nextPrayer.id) View.VISIBLE else View.INVISIBLE)
+        if (schedule.fajr.id == currentPrayer.id) views.setTextViewText(R.id.tv_col_fajr_badge, "الحالية")
+        else if (schedule.fajr.id == nextPrayer.id) views.setTextViewText(R.id.tv_col_fajr_badge, "القادمة")
+
+        views.setViewVisibility(R.id.tv_col_dhuhr_badge, if (schedule.dhuhr.id == currentPrayer.id) View.VISIBLE else if (schedule.dhuhr.id == nextPrayer.id) View.VISIBLE else View.INVISIBLE)
+        if (schedule.dhuhr.id == currentPrayer.id) views.setTextViewText(R.id.tv_col_dhuhr_badge, "الحالية")
+        else if (schedule.dhuhr.id == nextPrayer.id) views.setTextViewText(R.id.tv_col_dhuhr_badge, "القادمة")
+
+        views.setViewVisibility(R.id.tv_col_asr_badge, if (schedule.asr.id == currentPrayer.id) View.VISIBLE else if (schedule.asr.id == nextPrayer.id) View.VISIBLE else View.INVISIBLE)
+        if (schedule.asr.id == currentPrayer.id) views.setTextViewText(R.id.tv_col_asr_badge, "الحالية")
+        else if (schedule.asr.id == nextPrayer.id) views.setTextViewText(R.id.tv_col_asr_badge, "القادمة")
+
+        views.setViewVisibility(R.id.tv_col_maghrib_badge, if (schedule.maghrib.id == currentPrayer.id) View.VISIBLE else if (schedule.maghrib.id == nextPrayer.id) View.VISIBLE else View.INVISIBLE)
+        if (schedule.maghrib.id == currentPrayer.id) views.setTextViewText(R.id.tv_col_maghrib_badge, "الحالية")
+        else if (schedule.maghrib.id == nextPrayer.id) views.setTextViewText(R.id.tv_col_maghrib_badge, "القادمة")
+
+        views.setViewVisibility(R.id.tv_col_isha_badge, if (schedule.isha.id == currentPrayer.id) View.VISIBLE else if (schedule.isha.id == nextPrayer.id) View.VISIBLE else View.INVISIBLE)
+        if (schedule.isha.id == currentPrayer.id) views.setTextViewText(R.id.tv_col_isha_badge, "الحالية")
+        else if (schedule.isha.id == nextPrayer.id) views.setTextViewText(R.id.tv_col_isha_badge, "القادمة")
+
+        // Salawat bottom bar
+        if (settings.salawatEnabled && settings.nextSalawatTimestamp > 0) {
+            views.setViewVisibility(R.id.layout_widget_salawat, View.VISIBLE)
+            val salawatRemaining = (settings.nextSalawatTimestamp - System.currentTimeMillis()).coerceAtLeast(0L)
+            views.setTextViewText(R.id.tv_widget_salawat_countdown, "الصلاة على النبي ﷺ: يتبقى ${formatSalawatTimer(salawatRemaining)}")
+
+            // Click listener on "صلّ الآن ﷺ"
+            val playIntent = Intent(context, WidgetActionReceiver::class.java).apply {
+                action = WidgetActionReceiver.ACTION_PLAY_SALAWAT
+            }
+            val playPendingIntent = PendingIntent.getBroadcast(
+                context,
+                201,
+                playIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            views.setOnClickPendingIntent(R.id.btn_widget_salawat_action, playPendingIntent)
+        } else {
+            views.setViewVisibility(R.id.layout_widget_salawat, View.GONE)
+        }
+
+        // Open App when clicking main widget area
+        val appIntent = Intent(context, MainActivity::class.java)
+        val appPendingIntent = PendingIntent.getActivity(
+            context,
+            100,
+            appIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        views.setOnClickPendingIntent(R.id.banner_next_prayer, appPendingIntent)
+
+        return views
+    }
+
+    fun updateAllWidgets(context: Context) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val db = PrayerApplication.instance.database
+                val settings = db.settingsDao().getSettingsDirect() ?: AppSettingsEntity()
+                val appWidgetManager = AppWidgetManager.getInstance(context)
+                val widgetComponent = ComponentName(context, "com.example.receiver.PrayerTimesWidgetProvider")
+                val widgetIds = appWidgetManager.getAppWidgetIds(widgetComponent)
+                if (widgetIds.isNotEmpty()) {
+                    val views = buildWidgetRemoteViews(context, settings)
+                    appWidgetManager.updateAppWidget(widgetIds, views)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    fun playSalawatDirectly(context: Context) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val db = PrayerApplication.instance.database
+                val s = db.settingsDao().getSettingsDirect() ?: AppSettingsEntity()
+                val files = ZipExtractor.getExtractedFiles(context, "salawat_audios")
+
+                if (files.isNotEmpty()) {
+                    val fileToPlay = when (s.salawatSelectionMode) {
+                        "RANDOM" -> files.random()
+                        "SPECIFIC" -> files[s.salawatSpecificSoundIndex.coerceIn(0, files.size - 1)]
+                        else -> {
+                            val nextIdx = (s.salawatLastPlayedIndex + 1) % files.size
+                            db.settingsDao().insertOrUpdate(s.copy(salawatLastPlayedIndex = nextIdx))
+                            files[nextIdx]
+                        }
+                    }
+                    AudioPlayerHelper.playAudioUri(context, fileToPlay.absolutePath)
+                } else {
+                    AudioPlayerHelper.playSynthesizedChime()
+                }
+
+                // Reset timer for next interval
+                val nextTimestamp = System.currentTimeMillis() + (s.salawatIntervalMinutes * 60 * 1000L)
+                db.settingsDao().insertOrUpdate(s.copy(nextSalawatTimestamp = nextTimestamp))
+                AlarmScheduler.scheduleSalawat(context, s.copy(nextSalawatTimestamp = nextTimestamp))
+
+                // Update widgets and notification
+                updateAllWidgets(context)
+                NotificationHelper.updateOngoingPrayerNotification(context)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+}
